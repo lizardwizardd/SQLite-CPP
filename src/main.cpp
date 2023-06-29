@@ -1,9 +1,9 @@
 #include "../includes/database.h"
 
 
-int main(int argc, std::string argv)
+int main(int argc, char** argv)
 {
-	Database database;
+	Database database(argc, argv);
     database.run();
 
     return 0;

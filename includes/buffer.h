@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <memory>
 
+#include "constants.h"
+
 class InputBuffer
 {
 private:

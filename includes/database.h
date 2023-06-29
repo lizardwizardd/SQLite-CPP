@@ -5,6 +5,9 @@
 #include "../includes/buffer.h"
 #include "../includes/statement.h"
 #include "../includes/data.h"
+#include "../includes/pager.h"
+
+#include "constants.h"
 
 class Database 
 {
@@ -12,8 +15,11 @@ private:
     Table* table;
     std::shared_ptr<InputBuffer> input_buffer;
 
+    int argc;
+    char** argv;
+
 public:
-    Database();
+    Database(int argc, char** argv);
 
     ~Database();
 

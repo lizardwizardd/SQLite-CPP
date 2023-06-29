@@ -3,10 +3,11 @@
 
 // META COMMANDS
 
-MetaCommandResult do_meta_command(InputBuffer* input_buffer)
+MetaCommandResult do_meta_command(InputBuffer* input_buffer, Table* table)
 {
 	if (input_buffer->getBuffer() == ".exit")
 	{
+        db_close(table);
 		exit(EXIT_SUCCESS);
 	}
 	else

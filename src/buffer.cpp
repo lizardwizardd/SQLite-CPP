@@ -1,5 +1,4 @@
 #include "../includes/buffer.h"
-#include "buffer.h"
 
 
 InputBuffer::InputBuffer() : buffer(""), input_length(0) { }
