@@ -22,19 +22,19 @@ void print_row(Row* row)
     std::cout << "(" << row->id << ", " << row->username << ", " << row->email << ")" << std::endl;
 }
 
-Table* db_open(std::string filename)
+std::unique_ptr<Table> db_open(std::string filename)
 {
     Pager* pager = pager_open(filename);
     uint32_t num_rows = pager->getFileLength() / ROW_SIZE;
 
-    Table* table = new Table;
+    std::unique_ptr<Table> table = std::make_unique<Table>();
 
     table->pager = pager;
     table->num_rows = num_rows;
     return table;
 }
 
-void db_close(Table* table)
+void db_close(const std::unique_ptr<Table>& table)
 {
     Pager* pager = table->pager;
     uint32_t num_full_pages = table->num_rows / ROWS_PER_PAGE;
@@ -80,10 +80,9 @@ void db_close(Table* table)
         }
     }
     delete pager;
-    delete table;
 }
 
-void* row_slot(Table* table, uint32_t row_num)
+void* row_slot(const std::unique_ptr<Table>& table, uint32_t row_num)
 {
     uint32_t page_num = row_num / ROWS_PER_PAGE;
     

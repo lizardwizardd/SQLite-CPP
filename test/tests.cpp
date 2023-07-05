@@ -8,116 +8,213 @@
 #include "../includes/pager.h"
 #include "../includes/statement.h"
 
-#include <algorithm>
 #include <sstream>
+#include <algorithm>
 
+int argc_global = 0;
+char** argv_global;
 
 // Custom stream buffer to capture output
 // Buffer has to be flushed after each line for the output capturer to work 
-class OutputCapturer : public std::stringbuf {
+class OutputCapturer : public std::stringbuf 
+{
+private:
+    std::vector<std::string> outputs;
+
 public:
-    virtual int sync() {
+    virtual int sync() 
+    {
         std::string output = str();
-        if (!output.empty()) {
-            outputs.push_back(output);
+        if (!output.empty())
+        {
+            std::istringstream iss(output);
+            std::string line;
+            while (std::getline(iss, line))
+            {
+                outputs.push_back(line);
+            }
             str(""); // Clear the buffer
         }
         return 0;
     }
 
-    std::vector<std::string> getOutputs() const {
+    std::vector<std::string> getOutputs() const 
+    {
         return outputs;
     }
-
-private:
-    std::vector<std::string> outputs;
 };
 
-/*
-// Helper function to run script and capture output
-// Gets input as a vector of strings 
-std::vector<std::string> RunScript(std::vector<std::string>& commands) 
+void Database::runTest(std::vector<std::string>& commands)
 {
-    std::vector <std::string> results;
-
-    Database db(2, { "test.txt", "test.txt"});
-    db.runDebug(commands, results);
-
-    return results;
-}
-*/
-
-/*
-TEST(DB_TEST, InsertLongStrings)
-{
-    std::vector<std::string> commands;
-    std::vector <std::string> results;
-    std::vector <std::string> expect;
-    
-    std::string longUsername(32, 'a');
-    std::string longEmail(255, 'a');
-
-    commands = {
-        "insert 1 " + longUsername + " " + longEmail,
-        "select"
-    };
-    expect = {
-        "db > Executed.\n",
-        "db > (1, " + longUsername + ", " + longEmail + ")\n",
-        "Executed.\n",
-    };
     std::reverse(commands.begin(), commands.end());
 
-    // Redirect std::cout to an std::ostringstream
-    OutputCapturer outputCapturer;
-    std::streambuf* originalOutputBuffer = std::cout.rdbuf(&outputCapturer);
-
-    results = RunScript(commands);
-
-    // Restore the original std::cout buffer
-    std::cout.rdbuf(originalOutputBuffer);
-
-    // Write outputs into a vector
-    std::vector<std::string> capturedOutputs = outputCapturer.getOutputs();
-
-    EXPECT_EQ(expect, capturedOutputs);
-}
-*/
-
-/*
-TEST(DB_TEST, ErrorWhenFull)
-{
-    std::vector<std::string> commands;
-    std::vector <std::string> results;
-    std::vector <std::string> expect;
-
-    for (int i = 1; i < 1401; i++)
+    if (argc < 2)
     {
-        commands.push_back("insert " + std::to_string(i) + " MyUsername adress@gmail.com");
+        std::cout << "Must supply a database filename." << std::endl;
+        exit(EXIT_FAILURE);
     }
-    std::reverse(commands.begin(), commands.end());
 
-    // Redirect std::cout to an std::ostringstream
-    OutputCapturer outputCapturer;
-    std::streambuf* originalOutputBuffer = std::cout.rdbuf(&outputCapturer);
+    std::string filename = argv[1];
+    table = std::move(db_open(filename));
+    input_buffer = std::make_shared<InputBuffer>();
 
-    results = RunScript(commands);
+    while (!commands.empty())
+    {
+        if (commands.back() == ".exit")
+        {
+            db_close(table);
+            return;
+        }
+        //print_prompt(); // dont print prompt in the test version to make expected outputs more simple
+        input_buffer->read_input_test(commands);
 
-    // Restore the original std::cout buffer
-    std::cout.rdbuf(originalOutputBuffer);
-
-    // Write outputs into a vector
-    std::vector<std::string> capturedOutputs = outputCapturer.getOutputs();
-
-    EXPECT_EQ("db > Error: Table full.\n", capturedOutputs[capturedOutputs.size() - 2]);
+        if (input_buffer->getBuffer().front() == '.')
+        {   
+            handleMetaCommand();
+        }
+        else
+        {
+            handleStatement();
+        }
+    }
 }
-*/
 
+void InputBuffer::read_input_test(std::vector<std::string> &commands)
+{
+	this->buffer = commands.back();
+    commands.pop_back();
+
+	// Remove spaces and newline characters
+	while (buffer.back() == ' ' || buffer.back() == '\n')
+	{
+		buffer.pop_back();
+	}
+
+	input_length = buffer.size();
+}
+
+
+class DB_TEST : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        // Redirect std::cout to an std::ostringstream
+        originalOutputBuffer = std::cout.rdbuf(&outputCapturer);
+    }
+
+    void TearDown() override
+    {
+        // Restore the original std::cout buffer
+        std::cout.rdbuf(originalOutputBuffer);
+    }
+
+    OutputCapturer outputCapturer;
+    std::streambuf* originalOutputBuffer;
+};
+
+
+TEST_F(DB_TEST, InsertAndSelect)
+{
+    std::vector<std::string> commands = {
+        "insert 1 SomeName randomaddress@gmail.com",
+        "select",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed.",
+        "(1, SomeName, randomaddress@gmail.com)",
+        "Executed."
+    };
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, PersistenceBetweenFiles)
+{
+    std::vector<std::string> commands = {
+        "select",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "(1, SomeName, randomaddress@gmail.com)",
+        "Executed."
+    };
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, InsertMaxLengthStrings)
+{
+    std::string longName(32, 'a');
+    std::string longEmail(255, 'a');
+    
+    std::vector<std::string> commands = {
+        "insert 1 " + longName + " " + longEmail, 
+        ".exit"
+    };
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("Executed.", outputCapturer.getOutputs().back());
+}
+
+TEST_F(DB_TEST, ErrorWhenStringsTooLong)
+{
+    std::string longName(33, 'a');
+    std::string longEmail(256, 'a');
+    
+    std::vector<std::string> commands = {
+        "insert 1 " + longName + " " + longEmail, 
+        ".exit"
+    };
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("Error: String is too long.", outputCapturer.getOutputs().back());
+}
+
+TEST_F(DB_TEST, ErrorWhenNegativeId)
+{   
+    std::vector<std::string> commands = {
+        "insert -1 aa aaaaaa", 
+        ".exit"
+    };
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("Error: ID must be positive.", outputCapturer.getOutputs().back());
+}
+
+TEST_F(DB_TEST, ErrorWhenFull)
+{
+    std::vector<std::string> commands;
+    for (int i = 1; i < 1400; i++)
+    {
+        commands.push_back("insert " + std::to_string(i) + " aaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" );
+    }
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("Error: Table full.", outputCapturer.getOutputs().back());
+}
 
 int main(int argc, char** argv) 
 {
+    argc_global = argc;
+    argv_global = argv;
     // Initialize the Google Test framework
-    testing::InitGoogleTest(&argc, argv);
+    testing::InitGoogleTest(&argc_global, argv_global);
     // Run all tests
     return RUN_ALL_TESTS();
 }

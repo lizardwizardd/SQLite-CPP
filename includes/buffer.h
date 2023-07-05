@@ -18,7 +18,7 @@ public:
 	InputBuffer();
 
     void read_input();
-    void read_input_debug(std::vector<std::string> &commands);
+    void read_input_test(std::vector<std::string> &commands);
 
 const std::string getBuffer() const;
 

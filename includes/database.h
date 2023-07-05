@@ -12,7 +12,7 @@
 class Database 
 {
 private:
-    Table* table;
+    std::unique_ptr<Table> table;
     std::shared_ptr<InputBuffer> input_buffer;
 
     int argc;
@@ -21,9 +21,15 @@ private:
 public:
     Database(int argc, char** argv);
 
-    ~Database();
+    void handleMetaCommand();
+
+    void handleStatement();
+
+    void printErrorMessage(const std::string& message);
 
     void run();
 
-    void runDebug(std::vector<std::string> &commands, std::vector <std::string> &results);
+    void runTest(std::vector<std::string>& commands);
+
+    ~Database();
 };

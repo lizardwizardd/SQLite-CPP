@@ -3,7 +3,7 @@
 
 // META COMMANDS
 
-MetaCommandResult do_meta_command(InputBuffer* input_buffer, Table* table)
+MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer, const std::unique_ptr<Table>& table)
 {
 	if (input_buffer->getBuffer() == ".exit")
 	{
@@ -66,7 +66,7 @@ PrepareResult Statement::prepare_statement(InputBuffer* input_buffer)
 	return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
-ExecuteResult Statement::execute_insert(Table* table)
+ExecuteResult Statement::execute_insert(const std::unique_ptr<Table>& table)
 {
 	if (table->num_rows >= TABLE_MAX_ROWS)
 	{
@@ -80,7 +80,7 @@ ExecuteResult Statement::execute_insert(Table* table)
 	return EXECUTE_SUCCESS;
 }
 
-ExecuteResult Statement::execute_select(Table* table)
+ExecuteResult Statement::execute_select(const std::unique_ptr<Table>& table)
 {
 	Row row;
 	for (uint32_t i = 0; i < table->num_rows; i++)
@@ -91,7 +91,7 @@ ExecuteResult Statement::execute_select(Table* table)
 	return EXECUTE_SUCCESS;
 }
 
-ExecuteResult Statement::execute_statement(Table* table)
+ExecuteResult Statement::execute_statement(const std::unique_ptr<Table>& table)
 {
 	switch (type)
 	{

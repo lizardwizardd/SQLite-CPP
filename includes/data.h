@@ -25,10 +25,8 @@ typedef struct
 	Pager* pager;
 } Table;
 
-Table* db_open(std::string filename);
+std::unique_ptr<Table> db_open(std::string filename);
 
-void db_close(Table* table);
+void db_close(const std::unique_ptr<Table>& table);
 
-void free_table(Table*);
-
-void* row_slot(Table*, uint32_t);
+void* row_slot(const std::unique_ptr<Table>& table, uint32_t);
