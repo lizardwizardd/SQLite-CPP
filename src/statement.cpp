@@ -3,7 +3,7 @@
 
 // META COMMANDS
 
-MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer, const std::unique_ptr<Table>& table)
+MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer, const std::shared_ptr<Table>& table)
 {
 	if (input_buffer->getBuffer() == ".exit")
 	{
@@ -66,7 +66,7 @@ PrepareResult Statement::prepare_statement(InputBuffer* input_buffer)
 	return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
-ExecuteResult Statement::execute_insert(const std::unique_ptr<Table>& table)
+ExecuteResult Statement::execute_insert(std::shared_ptr<Table>& table)
 {
 	if (table->num_rows >= TABLE_MAX_ROWS)
 	{
@@ -74,24 +74,30 @@ ExecuteResult Statement::execute_insert(const std::unique_ptr<Table>& table)
 	}
 
 	Row* row_to_insert_ptr = &(this->row_to_insert);
-	serialize_row(row_to_insert_ptr, row_slot(table, table->num_rows));
+    std::unique_ptr<Cursor> cursor = table_end(table);
+
+	serialize_row(row_to_insert_ptr, cursor_value(cursor));
 	table->num_rows += 1;
 
 	return EXECUTE_SUCCESS;
 }
 
-ExecuteResult Statement::execute_select(const std::unique_ptr<Table>& table)
+ExecuteResult Statement::execute_select(std::shared_ptr<Table>& table)
 {
+    std::unique_ptr<Cursor> cursor = table_start(table);
+
 	Row row;
-	for (uint32_t i = 0; i < table->num_rows; i++)
+	while (!(cursor->end_of_table))
 	{
-		deserialize_row(row_slot(table, i), &row);
+		deserialize_row(cursor_value(cursor), &row);
 		print_row(&row);
+        cursor_advance(cursor);
 	}
+
 	return EXECUTE_SUCCESS;
 }
 
-ExecuteResult Statement::execute_statement(const std::unique_ptr<Table>& table)
+ExecuteResult Statement::execute_statement(std::shared_ptr<Table>& table)
 {
 	switch (type)
 	{

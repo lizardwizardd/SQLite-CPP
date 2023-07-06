@@ -18,7 +18,7 @@ typedef enum {
 	META_COMMAND_UNRECOGNIZED_COMMAND
 } MetaCommandResult;
 
-MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer>, const std::unique_ptr<Table>&);
+MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer>, const std::shared_ptr<Table>&);
 
 
 // STATEMENTS
@@ -42,11 +42,11 @@ public:
 
 	PrepareResult prepare_statement(InputBuffer*);
 
-	ExecuteResult execute_insert(const std::unique_ptr<Table>& table);
+	ExecuteResult execute_insert(std::shared_ptr<Table>& table);
 
-	static ExecuteResult execute_select(const std::unique_ptr<Table>& table);
+	static ExecuteResult execute_select(std::shared_ptr<Table>& table);
 
-	ExecuteResult execute_statement(const std::unique_ptr<Table>& table);
+	ExecuteResult execute_statement(std::shared_ptr<Table>& table);
 
 	const StatementType getStatement() const;
 

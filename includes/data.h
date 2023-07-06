@@ -25,8 +25,21 @@ typedef struct
 	Pager* pager;
 } Table;
 
-std::unique_ptr<Table> db_open(std::string filename);
+typedef struct
+{
+    std::shared_ptr<Table> table;
+    uint32_t row_num;
+    bool end_of_table; // Indicates a position one past the last element
+} Cursor;
 
-void db_close(const std::unique_ptr<Table>& table);
+std::unique_ptr<Cursor> table_start(std::shared_ptr<Table>& table);
 
-void* row_slot(const std::unique_ptr<Table>& table, uint32_t);
+std::unique_ptr<Cursor> table_end(std::shared_ptr<Table>& table);
+
+std::shared_ptr<Table> db_open(std::string filename);
+
+void db_close(const std::shared_ptr<Table>& table);
+
+void* cursor_value(std::unique_ptr<Cursor>& cursor);
+
+void cursor_advance(std::unique_ptr<Cursor>& cursor);

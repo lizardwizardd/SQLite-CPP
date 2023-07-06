@@ -12,7 +12,7 @@
 class Database 
 {
 private:
-    std::unique_ptr<Table> table;
+    std::shared_ptr<Table> table;
     std::shared_ptr<InputBuffer> input_buffer;
 
     int argc;
