@@ -23,15 +23,15 @@ void* Pager::get_page(uint32_t page_num)
     {
         // Cache miss. Allocate memory and load from file
         void* page = new char[PAGE_SIZE];
-        uint32_t num_pages = this->file_length / PAGE_SIZE;
+        this->num_pages = this->file_length / PAGE_SIZE;
 
         // We might save a partial page at the end of the file
         if (this->file_length % PAGE_SIZE)
         {
-            num_pages++;
+            this->num_pages++;
         }
 
-        if (page_num <= num_pages)
+        if (page_num <= this->num_pages)
         {
             DWORD bytes_read;
             DWORD seek_position = page_num * PAGE_SIZE;
@@ -44,6 +44,11 @@ void* Pager::get_page(uint32_t page_num)
             }
         }
         this->pages[page_num] = page;
+        
+        if (page_num >= this->num_pages)
+        {
+            this->num_pages = page_num + 1;
+        }
     }
     return this->pages[page_num];
 }
@@ -62,6 +67,13 @@ Pager* pager_open(std::string filename)
     Pager* pager = new Pager();
     pager->file_handle = file_handle;
     pager->file_length = file_length;
+    pager->num_pages = file_length / PAGE_SIZE;
+
+    if (file_length % PAGE_SIZE != 0)
+    {
+        printf("Db file is not a whole number of pages. Corrupt file.\n");
+        exit(EXIT_FAILURE);
+    }
 
     for (uint32_t i = 0; i < TABLE_MAX_PAGES; i++) 
     {
@@ -72,7 +84,7 @@ Pager* pager_open(std::string filename)
 }
 
 
-void Pager::pager_flush(uint32_t page_num, uint32_t size)
+void Pager::pager_flush(uint32_t page_num)
 {
     if (this->pages[page_num] == NULL)
     {
@@ -84,9 +96,16 @@ void Pager::pager_flush(uint32_t page_num, uint32_t size)
     DWORD seek_position = page_num * PAGE_SIZE;
     SetFilePointer(this->file_handle, seek_position, nullptr, FILE_BEGIN);
 
-    if (!WriteFile(this->file_handle, this->pages[page_num], size, &bytes_written, nullptr))
+    if (!WriteFile(this->file_handle, this->pages[page_num], PAGE_SIZE, &bytes_written, nullptr))
     {
         std::cout << "Error writing: " << GetLastError() << std::endl;
         exit(EXIT_FAILURE);
     }
+}
+
+// Until we start recycling free pages, new pages will always
+// go onto the end of the database file
+uint32_t Pager::get_unused_page_num()
+{
+    return num_pages;
 }

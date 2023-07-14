@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include <exception>
 
 #include "pager.h"
 #include "constants.h"
+#include "node.h"
 
 
 //-----------------------------------------------------------
@@ -21,20 +23,21 @@ void print_row(Row*);
 
 typedef struct 
 {
-	uint32_t num_rows;
 	Pager* pager;
+    uint32_t root_page_num;
 } Table;
 
 typedef struct
 {
-    std::shared_ptr<Table> table;
-    uint32_t row_num;
+    std::shared_ptr<Table> table; // Current table
+    uint32_t page_num; // Current page number
+    uint32_t cell_num; // Current cell number
     bool end_of_table; // Indicates a position one past the last element
 } Cursor;
 
 std::unique_ptr<Cursor> table_start(std::shared_ptr<Table>& table);
 
-std::unique_ptr<Cursor> table_end(std::shared_ptr<Table>& table);
+std::unique_ptr<Cursor> table_find(std::shared_ptr<Table>& table, uint32_t key);
 
 std::shared_ptr<Table> db_open(std::string filename);
 
@@ -43,3 +46,11 @@ void db_close(const std::shared_ptr<Table>& table);
 void* cursor_value(std::unique_ptr<Cursor>& cursor);
 
 void cursor_advance(std::unique_ptr<Cursor>& cursor);
+
+void leaf_node_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* value);
+
+void leaf_node_split_and_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* value);
+
+std::unique_ptr<Cursor> leaf_node_find(std::shared_ptr<Table>& table, uint32_t page_num, uint32_t key);
+
+void create_new_root(std::shared_ptr<Table>& table, uint32_t right_child_page_num);

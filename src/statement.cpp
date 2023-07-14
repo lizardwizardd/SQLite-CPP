@@ -10,10 +10,74 @@ MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer, con
         db_close(table);
 		exit(EXIT_SUCCESS);
 	}
+    else if (input_buffer->getBuffer() == ".btree")
+    {
+        print_tree(table->pager, 0, 0);
+        return META_COMMAND_SUCCESS;
+    }
+    else if (input_buffer->getBuffer() == ".constants")
+    {
+        print_constants();
+        return META_COMMAND_SUCCESS;
+    }
 	else
 	{
 		return META_COMMAND_UNRECOGNIZED_COMMAND;
 	}
+}
+
+void print_constants()
+{
+    std::cout << "Constants:" << std::endl;
+    std::cout << "ROW_SIZE: " << ROW_SIZE << std::endl;
+    std::cout << "COMMON_NODE_HEADER_SIZE: " << COMMON_NODE_HEADER_SIZE << std::endl;
+    std::cout << "LEAF_NODE_HEADER_SIZE: " << LEAF_NODE_HEADER_SIZE << std::endl;
+    std::cout << "LEAF_NODE_CELL_SIZE: " << LEAF_NODE_CELL_SIZE << std::endl;
+    std::cout << "LEAF_NODE_SPACE_FOR_CELLS: " << LEAF_NODE_SPACE_FOR_CELLS << std::endl;
+    std::cout << "LEAF_NODE_MAX_CELLS: " << LEAF_NODE_MAX_CELLS << std::endl;
+}
+
+void indent(uint32_t level) 
+{
+    for (uint32_t i = 0; i < level; i++) 
+    {
+        std::cout << "  ";
+    }
+}
+
+void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level)
+{
+    void* node = pager->get_page(page_num);
+    uint32_t num_keys, child;
+
+    switch (get_node_type(node)) 
+    {
+        case (NODE_LEAF):
+        num_keys = *leaf_node_num_cells(node);
+        indent(indentation_level);
+        printf("- leaf (size %d)\n", num_keys);
+        for (uint32_t i = 0; i < num_keys; i++) 
+        {
+            indent(indentation_level + 1);
+            printf("- %d\n", *leaf_node_key(node, i));
+        }
+        break;
+        case (NODE_INTERNAL):
+        num_keys = *internal_node_num_keys(node);
+        indent(indentation_level);
+        printf("- internal (size %d)\n", num_keys);
+        for (uint32_t i = 0; i < num_keys; i++) 
+        {
+            child = *internal_node_child(node, i);
+            print_tree(pager, child, indentation_level + 1);
+
+            indent(indentation_level + 1);
+            printf("- key %d\n", *internal_node_key(node, i));
+        }
+        child = *internal_node_right_child(node);
+        print_tree(pager, child, indentation_level + 1);
+        break;
+    }
 }
 
 // STATEMENTS
@@ -68,16 +132,23 @@ PrepareResult Statement::prepare_statement(InputBuffer* input_buffer)
 
 ExecuteResult Statement::execute_insert(std::shared_ptr<Table>& table)
 {
-	if (table->num_rows >= TABLE_MAX_ROWS)
-	{
-		return EXECUTE_TABLE_FULL;
-	}
+    // Point cursor at the position for a new key 
+	uint32_t key_to_insert = this->row_to_insert.id;
+    std::unique_ptr<Cursor> cursor = table_find(table, key_to_insert);
 
-	Row* row_to_insert_ptr = &(this->row_to_insert);
-    std::unique_ptr<Cursor> cursor = table_end(table);
+    void* node = table->pager->get_page(table->root_page_num);
+    uint32_t num_cells = (*leaf_node_num_cells(node));
 
-	serialize_row(row_to_insert_ptr, cursor_value(cursor));
-	table->num_rows += 1;
+    if (cursor->cell_num < num_cells)
+    {
+        uint32_t key_at_index = *leaf_node_key(node, cursor->cell_num);
+        if (key_at_index == key_to_insert)
+        {
+            return EXECUTE_DUPLICATE_KEY;
+        }
+    }
+
+	leaf_node_insert(cursor, this->row_to_insert.id, &row_to_insert);
 
 	return EXECUTE_SUCCESS;
 }

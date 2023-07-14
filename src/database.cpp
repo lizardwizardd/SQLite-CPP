@@ -47,6 +47,9 @@ void Database::handleStatement()
         case EXECUTE_SUCCESS:
             std::cout << "Executed." << std::endl;
             break;
+        case EXECUTE_DUPLICATE_KEY:
+            std::cout << "Error: Duplicate key." << std::endl;
+            break;
         case EXECUTE_TABLE_FULL:
             std::cout << "Error: Table full." << std::endl;
             break;

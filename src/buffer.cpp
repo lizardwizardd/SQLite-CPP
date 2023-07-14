@@ -27,7 +27,7 @@ const std::string InputBuffer::getBuffer() const
 	return buffer;
 }
 
-const size_t InputBuffer::getLength()
+const size_t InputBuffer::getLength() const
 {
 	return input_length;
 }

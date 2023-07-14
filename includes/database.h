@@ -2,11 +2,12 @@
 
 #include <iostream>
 #include <string>
+#include <exception>
+
 #include "../includes/buffer.h"
 #include "../includes/statement.h"
 #include "../includes/data.h"
 #include "../includes/pager.h"
-
 #include "constants.h"
 
 class Database 
