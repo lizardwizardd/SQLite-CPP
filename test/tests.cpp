@@ -156,7 +156,7 @@ TEST_F(DB_TEST, InsertMaxLengthStrings)
     std::string longEmail(255, 'a');
     
     std::vector<std::string> commands = {
-        "insert 1 " + longName + " " + longEmail, 
+        "insert 2 " + longName + " " + longEmail, 
         ".exit"
     };
 
@@ -172,7 +172,7 @@ TEST_F(DB_TEST, ErrorWhenStringsTooLong)
     std::string longEmail(256, 'a');
     
     std::vector<std::string> commands = {
-        "insert 1 " + longName + " " + longEmail, 
+        "insert 3 " + longName + " " + longEmail, 
         ".exit"
     };
 
@@ -193,6 +193,28 @@ TEST_F(DB_TEST, ErrorWhenNegativeId)
     databaseTest.runTest(commands);
 
     EXPECT_EQ("Error: ID must be positive.", outputCapturer.getOutputs().back());
+}
+
+TEST_F(DB_TEST, PrintConstants)
+{   
+    std::vector<std::string> commands = {
+        ".constants", 
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Constants:",
+        "ROW_SIZE: 293",
+        "COMMON_NODE_HEADER_SIZE: \x6",
+        "LEAF_NODE_HEADER_SIZE: 10",
+        "LEAF_NODE_CELL_SIZE: 297",
+        "LEAF_NODE_SPACE_FOR_CELLS: 4086",
+        "LEAF_NODE_MAX_CELLS: 13"
+    };
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
 TEST_F(DB_TEST, ErrorWhenFull)

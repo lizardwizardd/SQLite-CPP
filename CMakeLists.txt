@@ -27,6 +27,7 @@ add_library(classLib STATIC
     src/statement.cpp
     src/database.cpp
     src/pager.cpp
+    src/node.cpp
 )
 target_include_directories(classLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includes)
 
