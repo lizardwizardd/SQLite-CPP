@@ -3,7 +3,8 @@
 
 // META COMMANDS
 
-MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer, const std::shared_ptr<Table>& table)
+MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer, 
+                                  const std::shared_ptr<Table>& table)
 {
 	if (input_buffer->getBuffer() == ".exit")
 	{

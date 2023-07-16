@@ -65,7 +65,8 @@ void Database::runTest(std::vector<std::string>& commands)
             db_close(table);
             return;
         }
-        //print_prompt(); // dont print prompt in the test version to make expected outputs more simple
+        //print_prompt(); 
+        // Dont print prompt in the test version to make expected outputs simpler
         input_buffer->read_input_test(commands);
 
         if (input_buffer->getBuffer().front() == '.')
@@ -222,7 +223,8 @@ TEST_F(DB_TEST, ErrorWhenFull)
     std::vector<std::string> commands;
     for (int i = 1; i < 1400; i++)
     {
-        commands.push_back("insert " + std::to_string(i) + " aaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" );
+        commands.push_back("insert " + std::to_string(i) + 
+                           " aaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" );
     }
 
     Database databaseTest(argc_global, argv_global);

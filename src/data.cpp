@@ -19,7 +19,8 @@ void deserialize_row(void* source, Row* destination)
 
 void print_row(Row* row)
 {
-    std::cout << "(" << row->id << ", " << row->username << ", " << row->email << ")" << std::endl;
+    std::cout << "(" << row->id << ", " << row->username
+              << ", " << row->email << ")" << std::endl;
 }
 
 std::unique_ptr<Cursor> table_start(std::shared_ptr<Table>& table)
@@ -48,7 +49,7 @@ std::unique_ptr<Cursor> table_find(std::shared_ptr<Table>& table, uint32_t key)
     }
     else
     {
-        throw std::exception("Searching node unimplemented.\n");
+        throw std::runtime_error("Searching node unimplemented.");
     }
 }
 
@@ -89,8 +90,7 @@ void db_close(const std::shared_ptr<Table>& table)
 
     if (CloseHandle(pager->file_handle) == 0)
     {
-        std::cout << "Error closing db file." << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Error closing db file.");
     }
 
     for (uint32_t i = 0; i < TABLE_MAX_PAGES; i++)
@@ -205,11 +205,12 @@ void leaf_node_split_and_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, R
     }
     else
     {
-        throw std::exception("Updating after split unimplemented");
+        throw std::runtime_error("Updating after split unimplemented.");
     }
 }
 
-std::unique_ptr<Cursor> leaf_node_find(std::shared_ptr<Table>& table, uint32_t page_num, uint32_t key)
+std::unique_ptr<Cursor> leaf_node_find(std::shared_ptr<Table>& table, 
+                                       uint32_t page_num, uint32_t key)
 {
     void* node = table->pager->get_page(page_num);
     uint32_t num_cells = *leaf_node_num_cells(node);

@@ -38,7 +38,8 @@ void Database::handleStatement()
             printErrorMessage("Syntax error. Could not parse statement.");
             return;
         case PREPARE_UNRECOGNIZED_STATEMENT:
-            printErrorMessage("Unrecognized keyword at the start of " + input_buffer->getBuffer());
+            printErrorMessage("Unrecognized keyword at the start of "+ 
+                               input_buffer->getBuffer());
             return;
     }
 
@@ -65,8 +66,7 @@ void Database::run()
 {
     if (argc < 2)
     {
-        std::cout << "Must supply a database filename." << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Must supply a database filename.");
     }
 
     std::string filename = argv[1];

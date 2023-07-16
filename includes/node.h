@@ -4,6 +4,8 @@
 #include <memory>
 #include <exception>
 #include <iostream>
+#include <string>
+#include <sstream>
 
 #include "constants.h"
 

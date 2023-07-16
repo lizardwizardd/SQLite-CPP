@@ -29,11 +29,25 @@ void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level);
 
 // STATEMENTS
 
-typedef enum { STATEMENT_INSERT, STATEMENT_SELECT } StatementType;
+typedef enum 
+{ 
+    STATEMENT_INSERT, 
+    STATEMENT_SELECT 
+} StatementType;
 
-typedef enum { PREPARE_SUCCESS, PREPARE_NEGATIVE_ID, PREPARE_STRING_TOO_LONG, PREPARE_UNRECOGNIZED_STATEMENT, PREPARE_SYNTAX_ERROR } PrepareResult;
+typedef enum { 
+    PREPARE_SUCCESS, 
+    PREPARE_NEGATIVE_ID, 
+    PREPARE_STRING_TOO_LONG, 
+    PREPARE_UNRECOGNIZED_STATEMENT, 
+    PREPARE_SYNTAX_ERROR 
+} PrepareResult;
 
-typedef enum { EXECUTE_SUCCESS, EXECUTE_DUPLICATE_KEY, EXECUTE_TABLE_FULL } ExecuteResult;
+typedef enum { 
+    EXECUTE_SUCCESS, 
+    EXECUTE_DUPLICATE_KEY, 
+    EXECUTE_TABLE_FULL 
+} ExecuteResult;
 
 
 class Statement

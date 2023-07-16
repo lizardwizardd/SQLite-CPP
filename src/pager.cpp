@@ -14,9 +14,8 @@ void* Pager::get_page(uint32_t page_num)
 {
     if (page_num > TABLE_MAX_PAGES)
     {
-        std::cout << "Tried to fetch page number out of bounds. " << 
-            page_num << " > " << TABLE_MAX_PAGES << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Tried to fetch page number out of bounds. "
+            + std::to_string(page_num) + " > " + std::to_string(TABLE_MAX_PAGES));
     }
 
     if (this->pages[page_num] == NULL)
@@ -39,8 +38,7 @@ void* Pager::get_page(uint32_t page_num)
             SetFilePointer(this->file_handle, seek_position, nullptr, FILE_BEGIN);
             if (!ReadFile(this->file_handle, page, PAGE_SIZE, &bytes_read, nullptr))
             {
-                std::cout << "Error reading file: " << GetLastError() << std::endl;
-                exit(EXIT_FAILURE);
+                throw std::runtime_error("Error reading file: " + std::to_string(GetLastError()));
             }
         }
         this->pages[page_num] = page;
@@ -56,10 +54,12 @@ void* Pager::get_page(uint32_t page_num)
 
 Pager* pager_open(std::string filename)
 {
-    HANDLE file_handle = CreateFileA(filename.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file_handle == INVALID_HANDLE_VALUE) {
-        std::cout << "Unable to open file" << std::endl;
-        exit(EXIT_FAILURE);
+    HANDLE file_handle = CreateFileA(filename.c_str(), GENERIC_READ | GENERIC_WRITE,
+                         0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    if (file_handle == INVALID_HANDLE_VALUE) 
+    {
+        throw std::runtime_error("Unable to open file");
     }
 
     DWORD file_length = GetFileSize(file_handle, NULL);
@@ -71,8 +71,7 @@ Pager* pager_open(std::string filename)
 
     if (file_length % PAGE_SIZE != 0)
     {
-        printf("Db file is not a whole number of pages. Corrupt file.\n");
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Db file is not a whole number of pages. Corrupt file.");
     }
 
     for (uint32_t i = 0; i < TABLE_MAX_PAGES; i++) 
@@ -88,8 +87,7 @@ void Pager::pager_flush(uint32_t page_num)
 {
     if (this->pages[page_num] == NULL)
     {
-        std::cout << "Tried to flush null page" << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Db file is not a whole number of pages. Corrupt file.");
     }
 
     DWORD bytes_written;
@@ -98,8 +96,7 @@ void Pager::pager_flush(uint32_t page_num)
 
     if (!WriteFile(this->file_handle, this->pages[page_num], PAGE_SIZE, &bytes_written, nullptr))
     {
-        std::cout << "Error writing: " << GetLastError() << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Error writing: " + std::to_string(GetLastError()));
     }
 }
 

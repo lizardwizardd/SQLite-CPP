@@ -2,13 +2,15 @@
 
 uint32_t* leaf_node_num_cells(void* node)
 {
-    return reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(node) + LEAF_NODE_NUM_CELLS_OFFSET);
+    char* char_ptr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(char_ptr + LEAF_NODE_NUM_CELLS_OFFSET);
 }
 
 void* leaf_node_cell(void* node, uint32_t cell_num)
 {
     char* char_ptr = reinterpret_cast<char*>(node);
-    return reinterpret_cast<void*>(char_ptr + LEAF_NODE_HEADER_SIZE + cell_num * LEAF_NODE_CELL_SIZE);
+    return reinterpret_cast<void*>(char_ptr + LEAF_NODE_HEADER_SIZE + 
+                                   cell_num * LEAF_NODE_CELL_SIZE);
 }
 
 uint32_t* leaf_node_key(void* node, uint32_t cell_num)
@@ -31,30 +33,35 @@ void initialize_leaf_node(void* node)
 
 NodeType get_node_type(void* node)
 {
-    uint8_t value = *reinterpret_cast<uint8_t*>(reinterpret_cast<char*>(node) + NODE_TYPE_OFFSET);
+    char* charPtr = reinterpret_cast<char*>(node);
+    uint8_t value = *reinterpret_cast<uint8_t*>(charPtr + NODE_TYPE_OFFSET);
     return static_cast<NodeType>(value);
 }
 
 void set_node_type(void* node, NodeType type)
 {
+    char* charPtr = reinterpret_cast<char*>(node);
     uint8_t value = static_cast<uint8_t>(type);
-    *reinterpret_cast<uint8_t*>(reinterpret_cast<char*>(node) + NODE_TYPE_OFFSET) = value;
+    *reinterpret_cast<uint8_t*>(charPtr + NODE_TYPE_OFFSET) = value;
 }
 
 uint32_t* internal_node_num_keys(void* node)
 {
-    return reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(node) + INTERNAL_NODE_NUM_KEYS_OFFSET);
+    char* charPtr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(charPtr + INTERNAL_NODE_NUM_KEYS_OFFSET);
 }
 
 uint32_t* internal_node_right_child(void* node)
 {
-    return reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(node) + INTERNAL_NODE_RIGHT_CHILD_OFFSET);
+    char* charPtr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(charPtr + INTERNAL_NODE_RIGHT_CHILD_OFFSET);
 }
 
 uint32_t* internal_node_cell(void* node, uint32_t cell_num)
 {
-    char* char_ptr = reinterpret_cast<char*>(node);
-    return reinterpret_cast<uint32_t*>(char_ptr + INTERNAL_NODE_HEADER_SIZE + cell_num * INTERNAL_NODE_CELL_SIZE);
+    char* charPtr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(charPtr + INTERNAL_NODE_HEADER_SIZE +
+                                       cell_num * INTERNAL_NODE_CELL_SIZE);
 }
 
 uint32_t* internal_node_child(void* node, uint32_t child_num)
@@ -62,8 +69,8 @@ uint32_t* internal_node_child(void* node, uint32_t child_num)
     uint32_t num_keys = *internal_node_num_keys(node);
     if (child_num > num_keys)
     {
-        std::cout << "Tried to access child_num " << child_num << " > " << num_keys << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Tried to access child_num " + std::to_string(child_num) + 
+                                 " > " + std::to_string(num_keys));
     }
     else if (child_num == num_keys)
     {
