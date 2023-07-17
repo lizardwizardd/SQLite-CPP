@@ -67,7 +67,7 @@ std::shared_ptr<Table> db_open(std::string filename)
         // New database file. Initialize page 0 as leaf node
         void* root_node = pager->get_page(0);
         initialize_leaf_node(root_node);
-        //set_node_root(root_node, true);
+        set_node_root(root_node, true);
     }
 
     return table;
@@ -132,7 +132,6 @@ void leaf_node_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* value)
     uint32_t num_cells = *leaf_node_num_cells(node);
     if (num_cells >= LEAF_NODE_MAX_CELLS)
     {
-        std::cout << "Full!\n\n";
         // Node full
         leaf_node_split_and_insert(cursor, key, value);
         return;
@@ -199,6 +198,7 @@ void leaf_node_split_and_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, R
     // Update cell count on both leaf nodes
     *(leaf_node_num_cells(old_node)) = LEAF_NODE_LEFT_SPLIT_COUNT;
     *(leaf_node_num_cells(new_node)) = LEAF_NODE_RIGHT_SPLIT_COUNT;
+
     if (is_node_root(old_node))
     {
         return create_new_root(cursor->table, new_page_num);
@@ -252,7 +252,6 @@ void create_new_root(std::shared_ptr<Table>& table, uint32_t right_child_page_nu
     // Address of right child passed in.
     // Re-initialize root page to contain the new root node.
     // New root node points to two children.
-
     void* root = table->pager->get_page(table->root_page_num);
     void* right_child = table->pager->get_page(right_child_page_num);
     uint32_t left_child_page_num = table->pager->get_unused_page_num();
