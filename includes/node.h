@@ -21,6 +21,8 @@ uint32_t* leaf_node_key(void* node, uint32_t cell_num);
 
 void* leaf_node_value(void* node, uint32_t cell_num);
 
+uint32_t* leaf_node_next_leaf(void* node);
+
 void initialize_leaf_node(void* node);
 
 NodeType get_node_type(void* node);

@@ -24,11 +24,18 @@ void* leaf_node_value(void* node, uint32_t cell_num)
     return reinterpret_cast<void*>(char_ptr + LEAF_NODE_KEY_SIZE);
 }
 
+uint32_t* leaf_node_next_leaf(void* node) 
+{
+    char* char_ptr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(char_ptr + LEAF_NODE_NEXT_LEAF_OFFSET);
+}
+
 void initialize_leaf_node(void* node)
 {
     set_node_type(node, NODE_LEAF);
     set_node_root(node, false);
     *leaf_node_num_cells(node) = 0;
+    *leaf_node_next_leaf(node) = 0;  // 0 is no sibling
 }
 
 NodeType get_node_type(void* node)

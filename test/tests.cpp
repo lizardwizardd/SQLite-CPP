@@ -206,9 +206,9 @@ TEST_F(DB_TEST, PrintConstants)
         "Constants:",
         "ROW_SIZE: 293",
         "COMMON_NODE_HEADER_SIZE: \x6",
-        "LEAF_NODE_HEADER_SIZE: 10",
+        "LEAF_NODE_HEADER_SIZE: 14",
         "LEAF_NODE_CELL_SIZE: 297",
-        "LEAF_NODE_SPACE_FOR_CELLS: 4086",
+        "LEAF_NODE_SPACE_FOR_CELLS: 4082",
         "LEAF_NODE_MAX_CELLS: 13"
     };
 
@@ -221,7 +221,7 @@ TEST_F(DB_TEST, PrintConstants)
 TEST_F(DB_TEST, ErrorWhenFull)
 {
     std::vector<std::string> commands;
-    for (int i = 1; i < 1400; i++)
+    for (int i = 1; i < 15; i++)
     {
         commands.push_back("insert " + std::to_string(i) + 
                            " aaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" );

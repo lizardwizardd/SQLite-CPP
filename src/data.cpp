@@ -25,14 +25,13 @@ void print_row(Row* row)
 
 std::unique_ptr<Cursor> table_start(std::shared_ptr<Table>& table)
 {
-    std::unique_ptr<Cursor> cursor = std::make_unique<Cursor>();
-    cursor->table = table;
-    cursor->page_num = table->root_page_num;
-    cursor->cell_num = 0;
-
-    void* root_node = table->pager->get_page(table->root_page_num);
-    uint32_t num_cells = *leaf_node_num_cells(root_node);
+    // Search for the lowest id node
+    std::unique_ptr<Cursor> cursor =  table_find(table, 0);
+    
+    void* node = table->pager->get_page(cursor->page_num);
+    uint32_t num_cells = *leaf_node_num_cells(node);
     cursor->end_of_table = (num_cells == 0);
+
     return cursor;
 }
 
@@ -49,7 +48,7 @@ std::unique_ptr<Cursor> table_find(std::shared_ptr<Table>& table, uint32_t key)
     }
     else
     {
-        throw std::runtime_error("Searching node unimplemented.");
+        return internal_node_find(table, root_page_num, key);
     }
 }
 
@@ -121,7 +120,18 @@ void cursor_advance(std::unique_ptr<Cursor>& cursor)
     cursor->cell_num += 1;
     if (cursor->cell_num >= (*leaf_node_num_cells(node)))
     {
-        cursor->end_of_table = true;
+        // Advance to next leaf node
+        uint32_t next_page_num = *leaf_node_next_leaf(node);
+        if (next_page_num == 0)
+        {
+            // This was rightmost leaf
+            cursor->end_of_table = true;
+        }
+        else
+        {
+            cursor->page_num = next_page_num;
+            cursor->cell_num = 0;
+        }
     }
 }
 
@@ -161,6 +171,8 @@ void leaf_node_split_and_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, R
     uint32_t new_page_num = cursor->table->pager->get_unused_page_num();
     void* new_node = cursor->table->pager->get_page(new_page_num);
     initialize_leaf_node(new_node);
+    *leaf_node_next_leaf(new_node) = *leaf_node_next_leaf(old_node);
+    *leaf_node_next_leaf(old_node) = new_page_num;
 
     
     // All existing keys plus new key should be divided
@@ -183,7 +195,8 @@ void leaf_node_split_and_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, R
 
         if (i == cursor->cell_num)
         {
-            serialize_row(value, destination);
+            serialize_row(value, leaf_node_value(destination_node, index_within_node));
+            *leaf_node_key(destination_node, index_within_node) = key;
         }
         else if (i > cursor->cell_num)
         {
@@ -209,6 +222,7 @@ void leaf_node_split_and_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, R
     }
 }
 
+// Search table for a node that contains the given key
 std::unique_ptr<Cursor> leaf_node_find(std::shared_ptr<Table>& table, 
                                        uint32_t page_num, uint32_t key)
 {
@@ -269,4 +283,42 @@ void create_new_root(std::shared_ptr<Table>& table, uint32_t right_child_page_nu
     uint32_t left_child_max_key = get_node_max_key(left_child);
     *internal_node_key(root, 0) = left_child_max_key;
     *internal_node_right_child(root) = right_child_page_num;
+}
+
+// Search table for a node that contains the given key
+std::unique_ptr<Cursor> internal_node_find(std::shared_ptr<Table>& table, 
+                                           uint32_t page_num, uint32_t key)
+{
+    void* node = table->pager->get_page(page_num);
+    uint32_t num_keys = *internal_node_num_keys(node);
+
+    // Binary search to find index of child to search
+    uint32_t min_index = 0;
+    uint32_t max_index = num_keys;
+
+    while (min_index != max_index) 
+    {
+        uint32_t index = (min_index + max_index) / 2;
+        uint32_t key_to_right = *internal_node_key(node, index);
+        if (key_to_right >= key) 
+        {
+            max_index = index;
+        }
+        else
+        {
+            min_index = index + 1;
+        }
+    }
+
+    // Found child can be either a leaf node, or an internal node
+    // Recursively call find() function depending on the type
+    uint32_t child_num = *internal_node_child(node, min_index);
+    void* child = table->pager->get_page(child_num);
+    switch (get_node_type(child))
+    {
+        case NODE_LEAF:
+            return leaf_node_find(table, child_num, key);
+        case NODE_INTERNAL:
+            return internal_node_find(table, child_num, key);
+    }
 }

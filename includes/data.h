@@ -54,3 +54,5 @@ void leaf_node_split_and_insert(std::unique_ptr<Cursor>& cursor, uint32_t key, R
 std::unique_ptr<Cursor> leaf_node_find(std::shared_ptr<Table>& table, uint32_t page_num, uint32_t key);
 
 void create_new_root(std::shared_ptr<Table>& table, uint32_t right_child_page_num);
+
+std::unique_ptr<Cursor> internal_node_find(std::shared_ptr<Table>& table, uint32_t page_num, uint32_t key);
