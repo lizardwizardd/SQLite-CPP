@@ -21,7 +21,7 @@ FetchContent_MakeAvailable(googletest)
 
 
 # Compile src files into a static library
-add_library(classLib STATIC
+add_library(classes STATIC
     src/buffer.cpp
     src/data.cpp
     src/statement.cpp
@@ -29,16 +29,16 @@ add_library(classLib STATIC
     src/pager.cpp
     src/node.cpp
 )
-target_include_directories(classLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includes)
+target_include_directories(classes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includes)
 
 # Add main executable and link it with classes library
-add_executable(mainExe src/main.cpp)
-target_link_libraries(mainExe classLib)
+add_executable(db src/main.cpp)
+target_link_libraries(db classes)
 #target_include_directories(mainExe ${CMAKE_CURRENT_SOURCE_DIR}/includes)
 
 # Test executable
-add_executable(testRunner test/tests.cpp)
-target_link_libraries(testRunner 
-    classLib gtest_main gmock_main
+add_executable(tests test/tests.cpp)
+target_link_libraries(tests 
+    classes gtest_main gmock_main
 )
 

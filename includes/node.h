@@ -39,10 +39,14 @@ uint32_t* internal_node_child(void* node, uint32_t child_num);
 
 uint32_t* internal_node_key(void* node, uint32_t key_num);
 
-uint32_t get_node_max_key(void* node);
-
 bool is_node_root(void* node);
 
 void set_node_root(void* node, bool is_root);
 
 void initialize_internal_node(void* node);
+
+uint32_t* node_parent(void* node);
+
+void update_internal_node_key(void* node, uint32_t old_key, uint32_t new_key);
+
+uint32_t internal_node_find_child(void* node, uint32_t key);

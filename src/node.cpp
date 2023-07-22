@@ -1,5 +1,6 @@
 #include "../includes/node.h"
 
+// TODO - rename to leafNodeCellCount
 uint32_t* leaf_node_num_cells(void* node)
 {
     char* char_ptr = reinterpret_cast<char*>(node);
@@ -81,28 +82,29 @@ uint32_t* internal_node_child(void* node, uint32_t child_num)
     }
     else if (child_num == num_keys)
     {
-        return internal_node_right_child(node);
+        uint32_t* right_child = internal_node_right_child(node);
+        if (*right_child == INVALID_PAGE_NUM)
+        {
+            throw std::runtime_error("Tried to access right child, but the page was invalid");
+        }
+        return right_child;
     }
     else
     {
-        return internal_node_cell(node, child_num);
+        uint32_t* child = internal_node_cell(node, child_num);
+        if (*child == INVALID_PAGE_NUM)
+        {
+            throw std::runtime_error("Tried to access child " + std::to_string(child_num) +
+                                     " , but the page was invalid");
+        }
+        return child;
     }
 }
 
 uint32_t* internal_node_key(void* node, uint32_t key_num)
 {
-    return internal_node_cell(node, key_num) + INTERNAL_NODE_CHILD_SIZE;
-}
-
-uint32_t get_node_max_key(void* node) 
-{
-    switch (get_node_type(node)) 
-    {
-        case NODE_INTERNAL:
-            return *internal_node_key(node, *internal_node_num_keys(node) - 1);
-        case NODE_LEAF:
-            return *leaf_node_key(node, *leaf_node_num_cells(node) - 1);
-    }
+    char* charPtr = reinterpret_cast<char*>(internal_node_cell(node, key_num) + INTERNAL_NODE_CHILD_SIZE);
+    return reinterpret_cast<uint32_t*>(charPtr);
 }
 
 bool is_node_root(void* node) 
@@ -122,4 +124,19 @@ void initialize_internal_node(void* node)
     set_node_type(node, NODE_INTERNAL);
     set_node_root(node, false);
     *internal_node_num_keys(node) = 0;
+    
+    // Making sure right child number does not initialize with 0
+    *internal_node_right_child(node) = INVALID_PAGE_NUM;
+}
+
+uint32_t* node_parent(void* node)
+{ 
+    char* charPtr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(charPtr + PARENT_POINTER_OFFSET);
+}
+
+void update_internal_node_key(void* node, uint32_t old_key, uint32_t new_key) 
+{
+    uint32_t old_child_index = internal_node_find_child(node, old_key);
+    *internal_node_key(node, old_child_index) = new_key;
 }

@@ -46,8 +46,7 @@ void indent(uint32_t level)
     }
 }
 
-void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level) 
-{
+void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level) {
     void* node = pager->get_page(page_num);
     uint32_t num_keys, child;
 
@@ -57,7 +56,7 @@ void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level)
             num_keys = *leaf_node_num_cells(node);
             indent(indentation_level);
             std::cout << "- leaf (size " << num_keys << ")\n";
-            for (uint32_t i = 0; i < num_keys; i++) 
+            for (uint32_t i = 0; i < num_keys; i++)
             {
                 indent(indentation_level + 1);
                 std::cout << "- " << *leaf_node_key(node, i) << "\n";
@@ -67,18 +66,21 @@ void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level)
             num_keys = *internal_node_num_keys(node);
             indent(indentation_level);
             std::cout << "- internal (size " << num_keys << ")\n";
-            for (uint32_t i = 0; i < num_keys; i++) {
-                child = *internal_node_child(node, i);
-                print_tree(pager, child, indentation_level + 1);
+            if (num_keys > 0)
+            {
+                for (uint32_t i = 0; i < num_keys; i++)
+                {
+                    child = *internal_node_child(node, i);
+                    print_tree(pager, child, indentation_level + 1);
 
-                indent(indentation_level + 1);
-                std::cout << "- key " << *internal_node_key(node, i) << "\n";
+                    indent(indentation_level + 1);
+                    std::cout << "- key " << *internal_node_key(node, i) << "\n";
+                }
+                child = *internal_node_right_child(node);
+                print_tree(pager, child, indentation_level + 1);
             }
-            child = *internal_node_right_child(node);
-            print_tree(pager, child, indentation_level + 1);
             break;
     }
-
     std::cout << std::flush;
 }
 
@@ -103,7 +105,7 @@ PrepareResult Statement::prepare_statement(InputBuffer* input_buffer)
 		{
 			return PREPARE_SYNTAX_ERROR;
 		}
-        if (tmpId < 0)
+        if (tmpId < 1)
         {
             return PREPARE_NEGATIVE_ID;
         }
