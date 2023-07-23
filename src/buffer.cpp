@@ -9,7 +9,7 @@ void InputBuffer::read_input()
 
 	if (std::cin.fail())
 	{
-        throw std::runtime_error("Error reading input");
+        throw std::runtime_error("Error reading input.");
 	}
 
 	// Remove spaces and newline characters

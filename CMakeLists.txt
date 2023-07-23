@@ -41,4 +41,3 @@ add_executable(tests test/tests.cpp)
 target_link_libraries(tests 
     classes gtest_main gmock_main
 )
-
