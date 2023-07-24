@@ -140,8 +140,8 @@ ExecuteResult Statement::execute_insert(std::shared_ptr<Table>& table)
 	uint32_t key_to_insert = this->row_to_insert.id;
     std::unique_ptr<Cursor> cursor = table_find(table, key_to_insert);
 
-    void* node = table->pager->get_page(table->root_page_num);
-    uint32_t num_cells = (*leaf_node_num_cells(node));
+    void* node = table->pager->get_page(cursor->page_num);
+    uint32_t num_cells = *leaf_node_num_cells(node);
 
     if (cursor->cell_num < num_cells)
     {

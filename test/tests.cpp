@@ -195,22 +195,6 @@ TEST_F(DB_TEST, PersistenceBetweenFiles)
     ASSERT_EQ(expect, outputCapturer.getOutputs());
 }
 
-TEST_F(DB_TEST, InsertDuplicateKey)
-{
-    std::vector<std::string> commands = {
-        "insert 1 Josh_Sawyer josh.sawyer@example.com",
-        ".exit"
-    };
-    std::vector<std::string> expect = {
-        "Error: Duplicate key.",
-    };
-
-    Database databaseTest(argc_global, argv_global);
-    databaseTest.runTest(commands);
-
-    ASSERT_EQ(expect, outputCapturer.getOutputs());
-}
-
 TEST_F(DB_TEST, InsertStringTooLong)
 {
     std::string longName(33, 'a');
@@ -292,6 +276,7 @@ TEST_F(DB_TEST, Insert40Rows)
         "insert 5 Emily_Williams emily.williams@example.com",
         "insert 3 Kevin_King kevin.king@example.com",
         "insert 29 Amanda_Davis amanda.davis@example.com",
+        "insert 34 John_Snow john.snow@example.com"
         "insert 15 Ryan_Garcia ryan.garcia@example.com",
         "insert 36 Emily_Perez emily.perez@example.com",
         "insert 24 Heather_Nelson heather.nelson@example.com",
@@ -317,9 +302,25 @@ TEST_F(DB_TEST, Insert40Rows)
     databaseTest.runTest(commands);
 
     std::vector<std::string> out = outputCapturer.getOutputs();
-    std::vector<std::string> outSelect(out.begin() + 38, out.end());
+    std::vector<std::string> outSelect(out.begin() + 39, out.end());
 
     EXPECT_EQ(expect, outSelect);
+}
+
+TEST_F(DB_TEST, InsertDuplicateKey)
+{
+    std::vector<std::string> commands = {
+        "insert 1 Josh_Sawyer josh.sawyer@example.com",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Error: Duplicate key.",
+    };
+
+    Database databaseTest(argc_global, argv_global);
+    databaseTest.runTest(commands);
+
+    ASSERT_EQ(expect, outputCapturer.getOutputs());
 }
 
 int main(int argc, char** argv) 
