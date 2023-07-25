@@ -1,142 +1,143 @@
 #include "../includes/node.h"
 
-// TODO - rename to leafNodeCellCount
-uint32_t* leaf_node_num_cells(void* node)
+uint32_t* leafGetCellCount(void* node)
 {
-    char* char_ptr = reinterpret_cast<char*>(node);
-    return reinterpret_cast<uint32_t*>(char_ptr + LEAF_NODE_NUM_CELLS_OFFSET);
+    char* charPtr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(charPtr + LEAF_NODE_NUM_CELLS_OFFSET);
 }
 
-void* leaf_node_cell(void* node, uint32_t cell_num)
+void* LeafGetCell(void* node, uint32_t cellCount)
 {
-    char* char_ptr = reinterpret_cast<char*>(node);
-    return reinterpret_cast<void*>(char_ptr + LEAF_NODE_HEADER_SIZE + 
-                                   cell_num * LEAF_NODE_CELL_SIZE);
+    char* charPtr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<void*>(charPtr + LEAF_NODE_HEADER_SIZE + 
+                                   cellCount * LEAF_NODE_CELL_SIZE);
 }
 
-uint32_t* leaf_node_key(void* node, uint32_t cell_num)
+uint32_t* leafGetKey(void* node, uint32_t cellCount)
 {
-    return reinterpret_cast<uint32_t*>(leaf_node_cell(node, cell_num));
+    return reinterpret_cast<uint32_t*>(LeafGetCell(node, cellCount));
 }
 
-void* leaf_node_value(void* node, uint32_t cell_num)
+void* leafGetValue(void* node, uint32_t cellCount)
 {
-    char* char_ptr = reinterpret_cast<char*>(leaf_node_cell(node, cell_num));
-    return reinterpret_cast<void*>(char_ptr + LEAF_NODE_KEY_SIZE);
+    char* charPtr = reinterpret_cast<char*>(LeafGetCell(node, cellCount));
+    return reinterpret_cast<void*>(charPtr + LEAF_NODE_KEY_SIZE);
 }
 
-uint32_t* leaf_node_next_leaf(void* node) 
+uint32_t* leafGetNextLeaf(void* node) 
 {
-    char* char_ptr = reinterpret_cast<char*>(node);
-    return reinterpret_cast<uint32_t*>(char_ptr + LEAF_NODE_NEXT_LEAF_OFFSET);
+    char* charPtr = reinterpret_cast<char*>(node);
+    return reinterpret_cast<uint32_t*>(charPtr + LEAF_NODE_NEXT_LEAF_OFFSET);
 }
 
-void initialize_leaf_node(void* node)
+void leafInitialize(void* node)
 {
-    set_node_type(node, NODE_LEAF);
-    set_node_root(node, false);
-    *leaf_node_num_cells(node) = 0;
-    *leaf_node_next_leaf(node) = 0;  // 0 is no sibling
+    nodeSetType(node, NODE_LEAF);
+    setRootNode(node, false);
+    *leafGetCellCount(node) = 0;
+    *leafGetNextLeaf(node) = 0;  // 0 is no sibling
 }
 
-NodeType get_node_type(void* node)
+NodeType nodeGetType(void* node)
 {
     char* charPtr = reinterpret_cast<char*>(node);
     uint8_t value = *reinterpret_cast<uint8_t*>(charPtr + NODE_TYPE_OFFSET);
     return static_cast<NodeType>(value);
 }
 
-void set_node_type(void* node, NodeType type)
+void nodeSetType(void* node, NodeType type)
 {
     char* charPtr = reinterpret_cast<char*>(node);
     uint8_t value = static_cast<uint8_t>(type);
     *reinterpret_cast<uint8_t*>(charPtr + NODE_TYPE_OFFSET) = value;
 }
 
-uint32_t* internal_node_num_keys(void* node)
+uint32_t* internalGetKeyCount(void* node)
 {
     char* charPtr = reinterpret_cast<char*>(node);
     return reinterpret_cast<uint32_t*>(charPtr + INTERNAL_NODE_NUM_KEYS_OFFSET);
 }
 
-uint32_t* internal_node_right_child(void* node)
+uint32_t* internalGetRightChild(void* node)
 {
     char* charPtr = reinterpret_cast<char*>(node);
     return reinterpret_cast<uint32_t*>(charPtr + INTERNAL_NODE_RIGHT_CHILD_OFFSET);
 }
 
-uint32_t* internal_node_cell(void* node, uint32_t cell_num)
+uint32_t* internalGetCell(void* node, uint32_t cellCount)
 {
     char* charPtr = reinterpret_cast<char*>(node);
     return reinterpret_cast<uint32_t*>(charPtr + INTERNAL_NODE_HEADER_SIZE +
-                                       cell_num * INTERNAL_NODE_CELL_SIZE);
+                                       cellCount * INTERNAL_NODE_CELL_SIZE);
 }
 
-uint32_t* internal_node_child(void* node, uint32_t child_num)
+// Get internal node child by its number
+uint32_t* internalGetChild(void* node, uint32_t child_num)
 {
-    uint32_t num_keys = *internal_node_num_keys(node);
-    if (child_num > num_keys)
+    uint32_t keyCount = *internalGetKeyCount(node);
+    if (child_num > keyCount)
     {
         throw std::runtime_error("Tried to access child_num " + std::to_string(child_num) + 
-                                 " > " + std::to_string(num_keys));
+                                 " > " + std::to_string(keyCount) + ".");
     }
-    else if (child_num == num_keys)
+    else if (child_num == keyCount)
     {
-        uint32_t* right_child = internal_node_right_child(node);
-        if (*right_child == INVALID_PAGE_NUM)
+        uint32_t* rightChild = internalGetRightChild(node);
+        if (*rightChild == INVALID_PAGE_NUM)
         {
-            throw std::runtime_error("Tried to access right child, but the page was invalid");
+            throw std::runtime_error("Tried to access right child, but the page was invalid.");
         }
-        return right_child;
+        return rightChild;
     }
     else
     {
-        uint32_t* child = internal_node_cell(node, child_num);
+        uint32_t* child = internalGetCell(node, child_num);
         if (*child == INVALID_PAGE_NUM)
         {
             throw std::runtime_error("Tried to access child " + std::to_string(child_num) +
-                                     " , but the page was invalid");
+                                     " , but the page was invalid.");
         }
         return child;
     }
 }
 
-uint32_t* internal_node_key(void* node, uint32_t key_num)
+// Get one of internal node keys by number
+uint32_t* internalGetKey(void* node, uint32_t key_num)
 {
-    char* charPtr = reinterpret_cast<char*>(internal_node_cell(node, key_num) + INTERNAL_NODE_CHILD_SIZE);
+    char* charPtr = reinterpret_cast<char*>(internalGetCell(node, key_num) + INTERNAL_NODE_CHILD_SIZE);
     return reinterpret_cast<uint32_t*>(charPtr);
 }
 
-bool is_node_root(void* node) 
+bool isRootNode(void* node) 
 {
     uint8_t value = *reinterpret_cast<uint8_t*>(reinterpret_cast<char*>(node) + IS_ROOT_OFFSET);
     return static_cast<bool>(value);
 }
 
-void set_node_root(void* node, bool is_root) 
+void setRootNode(void* node, bool is_root) 
 {
     uint8_t value = is_root;
     *reinterpret_cast<uint8_t*>(reinterpret_cast<char*>(node) + IS_ROOT_OFFSET) = value;
 }
 
-void initialize_internal_node(void* node) 
+void internalInitialize(void* node) 
 {
-    set_node_type(node, NODE_INTERNAL);
-    set_node_root(node, false);
-    *internal_node_num_keys(node) = 0;
+    nodeSetType(node, NODE_INTERNAL);
+    setRootNode(node, false);
+    *internalGetKeyCount(node) = 0;
     
     // Making sure right child number does not initialize with 0
-    *internal_node_right_child(node) = INVALID_PAGE_NUM;
+    *internalGetRightChild(node) = INVALID_PAGE_NUM;
 }
 
-uint32_t* node_parent(void* node)
+uint32_t* getParent(void* node)
 { 
     char* charPtr = reinterpret_cast<char*>(node);
     return reinterpret_cast<uint32_t*>(charPtr + PARENT_POINTER_OFFSET);
 }
 
-void update_internal_node_key(void* node, uint32_t old_key, uint32_t new_key) 
+void internalUpdateKey(void* node, uint32_t old_key, uint32_t new_key) 
 {
-    uint32_t old_child_index = internal_node_find_child(node, old_key);
-    *internal_node_key(node, old_child_index) = new_key;
+    uint32_t oldChildIndex = internalFindChild(node, old_key);
+    *internalGetKey(node, oldChildIndex) = new_key;
 }

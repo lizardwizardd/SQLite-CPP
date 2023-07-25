@@ -7,69 +7,69 @@ void* Pager::getPages()
 
 uint32_t Pager::getFileLength()
 {
-    return file_length;
+    return fileLength;
 }
 
-void* Pager::get_page(uint32_t page_num)
+void* Pager::getPage(uint32_t pageNumber)
 {
-    if (page_num > TABLE_MAX_PAGES)
+    if (pageNumber > TABLE_MAX_PAGES)
     {
         throw std::runtime_error("Tried to fetch page number out of bounds. "
-            + std::to_string(page_num) + " > " + std::to_string(TABLE_MAX_PAGES));
+            + std::to_string(pageNumber) + " > " + std::to_string(TABLE_MAX_PAGES));
     }
 
-    if (this->pages[page_num] == NULL)
+    if (this->pages[pageNumber] == NULL)
     {
         // Cache miss. Allocate memory and load from file
         void* page = new char[PAGE_SIZE];
-        this->num_pages = this->file_length / PAGE_SIZE;
+        this->pageCount = this->fileLength / PAGE_SIZE;
 
         // We might save a partial page at the end of the file
-        if (this->file_length % PAGE_SIZE)
+        if (this->fileLength % PAGE_SIZE)
         {
-            this->num_pages++;
+            this->pageCount++;
         }
 
-        if (page_num <= this->num_pages)
+        if (pageNumber <= this->pageCount)
         {
-            DWORD bytes_read;
-            DWORD seek_position = page_num * PAGE_SIZE;
+            DWORD bytesRead;
+            DWORD seekPosition = pageNumber * PAGE_SIZE;
 
-            SetFilePointer(this->file_handle, seek_position, nullptr, FILE_BEGIN);
-            if (!ReadFile(this->file_handle, page, PAGE_SIZE, &bytes_read, nullptr))
+            SetFilePointer(this->fileHandle, seekPosition, nullptr, FILE_BEGIN);
+            if (!ReadFile(this->fileHandle, page, PAGE_SIZE, &bytesRead, nullptr))
             {
                 throw std::runtime_error("Error reading file: " + std::to_string(GetLastError()));
             }
         }
-        this->pages[page_num] = page;
+        this->pages[pageNumber] = page;
         
-        if (page_num >= this->num_pages)
+        if (pageNumber >= this->pageCount)
         {
-            this->num_pages = page_num + 1;
+            this->pageCount = pageNumber + 1;
         }
     }
-    return this->pages[page_num];
+    return this->pages[pageNumber];
 }
 
-
-Pager* pager_open(std::string filename)
+// Open a new pager from file
+Pager* openPager(std::string filename)
 {
-    HANDLE file_handle = CreateFileA(filename.c_str(), GENERIC_READ | GENERIC_WRITE,
+    HANDLE fileHandle = CreateFileA(filename.c_str(), GENERIC_READ | GENERIC_WRITE,
                          0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-    if (file_handle == INVALID_HANDLE_VALUE) 
+    if (fileHandle == INVALID_HANDLE_VALUE) 
     {
         throw std::runtime_error("Unable to open file");
     }
 
-    DWORD file_length = GetFileSize(file_handle, NULL);
+    DWORD fileLength = GetFileSize(fileHandle, NULL);
 
     Pager* pager = new Pager();
-    pager->file_handle = file_handle;
-    pager->file_length = file_length;
-    pager->num_pages = file_length / PAGE_SIZE;
+    pager->fileHandle = fileHandle;
+    pager->fileLength = fileLength;
+    pager->pageCount = fileLength / PAGE_SIZE;
 
-    if (file_length % PAGE_SIZE != 0)
+    if (fileLength % PAGE_SIZE != 0)
     {
         throw std::runtime_error("Db file is not a whole number of pages. Corrupt file.");
     }
@@ -82,27 +82,26 @@ Pager* pager_open(std::string filename)
     return pager;
 }
 
-
-void Pager::pager_flush(uint32_t page_num)
+// Flush pager into a file
+void Pager::pagerFlush(uint32_t pageNumber)
 {
-    if (this->pages[page_num] == NULL)
+    if (this->pages[pageNumber] == NULL)
     {
         throw std::runtime_error("Db file is not a whole number of pages. Corrupt file.");
     }
 
-    DWORD bytes_written;
-    DWORD seek_position = page_num * PAGE_SIZE;
-    SetFilePointer(this->file_handle, seek_position, nullptr, FILE_BEGIN);
+    DWORD bytesWritten;
+    DWORD seekPosition = pageNumber * PAGE_SIZE;
+    SetFilePointer(this->fileHandle, seekPosition, nullptr, FILE_BEGIN);
 
-    if (!WriteFile(this->file_handle, this->pages[page_num], PAGE_SIZE, &bytes_written, nullptr))
+    if (!WriteFile(this->fileHandle, this->pages[pageNumber], PAGE_SIZE, &bytesWritten, nullptr))
     {
         throw std::runtime_error("Error writing: " + std::to_string(GetLastError()));
     }
 }
 
-// Until we start recycling free pages, new pages will always
-// go onto the end of the database file
-uint32_t Pager::get_unused_page_num()
+uint32_t Pager::getUnusedPageNumber()
 {
-    return num_pages;
+    // New pages are always on top of the file since free pages are not reused
+    return pageCount;
 }

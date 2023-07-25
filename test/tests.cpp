@@ -12,8 +12,8 @@
 #include <algorithm>
 #include <iterator>
 
-int argc_global = 0;
-char** argv_global;
+int argcGlobal = 0;
+char** argvGlobal;
 
 // Custom stream buffer to capture output
 // Buffer has to be flushed after each line for the output capturer to work 
@@ -55,21 +55,21 @@ void Database::runTest(std::vector<std::string>& commands)
     }
 
     std::string filename = argv[1];
-    table = std::move(db_open(filename));
-    input_buffer = std::make_shared<InputBuffer>();
+    table = std::move(openDatabase(filename));
+    inputBuffer = std::make_shared<InputBuffer>();
 
     while (!commands.empty())
     {
         if (commands.back() == ".exit")
         {
-            db_close(table);
+            closeDatabase(table);
             return;
         }
-        //print_prompt(); 
+        // print_prompt(); 
         // Dont print prompt in the test version to make expected outputs simpler
-        input_buffer->read_input_test(commands);
+        inputBuffer->readInputTest(commands);
 
-        if (input_buffer->getBuffer().front() == '.')
+        if (inputBuffer->getBuffer().front() == '.')
         {   
             handleMetaCommand();
         }
@@ -80,7 +80,7 @@ void Database::runTest(std::vector<std::string>& commands)
     }
 }
 
-void InputBuffer::read_input_test(std::vector<std::string> &commands)
+void InputBuffer::readInputTest(std::vector<std::string> &commands)
 {
 	this->buffer = commands.back();
     commands.pop_back();
@@ -91,7 +91,7 @@ void InputBuffer::read_input_test(std::vector<std::string> &commands)
 		buffer.pop_back();
 	}
 
-	input_length = buffer.size();
+	inputLength = buffer.size();
 }
 
 
@@ -129,7 +129,7 @@ int getRowKey(const std::string& command)
     return std::stoi(command.substr(start, end - start));
 }
 
-// Custom function to format the entry string
+// Format the entry string
 std::string formatRow(const std::string& command) 
 {
     size_t start = command.find("insert ") + 7;
@@ -172,7 +172,7 @@ TEST_F(DB_TEST, InsertAndSelect)
         "Executed."
     };
 
-    Database databaseTest(argc_global, argv_global);
+    Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
     ASSERT_EQ(expect, outputCapturer.getOutputs());
@@ -189,7 +189,7 @@ TEST_F(DB_TEST, PersistenceBetweenFiles)
         "Executed."
     };
 
-    Database databaseTest(argc_global, argv_global);
+    Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
     ASSERT_EQ(expect, outputCapturer.getOutputs());
@@ -205,7 +205,7 @@ TEST_F(DB_TEST, InsertStringTooLong)
         ".exit"
     };
 
-    Database databaseTest(argc_global, argv_global);
+    Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
     ASSERT_EQ("Error: String is too long.", outputCapturer.getOutputs().back());
@@ -218,7 +218,7 @@ TEST_F(DB_TEST, ErrorWhenNegativeId)
         ".exit"
     };
 
-    Database databaseTest(argc_global, argv_global);
+    Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
     ASSERT_EQ("Error: ID must be positive.", outputCapturer.getOutputs().back());
@@ -240,7 +240,7 @@ TEST_F(DB_TEST, PrintConstants)
         "LEAF_NODE_MAX_CELLS: 13"
     };
 
-    Database databaseTest(argc_global, argv_global);
+    Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
     EXPECT_EQ(expect, outputCapturer.getOutputs());
@@ -252,7 +252,6 @@ TEST_F(DB_TEST, Insert40Rows)
         "insert 17 Ashley_Wilson ashley.wilson@example.com",
         "insert 33 Megan_Clark megan.clark@example.com",
         "insert 11 Samantha_Scott samantha.scott@example.com",
-        "insert 2 Jessica_Miller jessica.miller@example.com",
         "insert 26 Rachel_Allen rachel.allen@example.com",
         "insert 35 Joshua_Wright joshua.wright@example.com",
         "insert 4 Benjamin_Carter benjamin.carter@example.com",
@@ -274,7 +273,7 @@ TEST_F(DB_TEST, Insert40Rows)
         "insert 27 Daniel_Moore daniel.moore@example.com",
         "insert 9 Madison_Moore madison.moore@example.com",
         "insert 5 Emily_Williams emily.williams@example.com",
-        "insert 3 Kevin_King kevin.king@example.com",
+        "insert 78 Kevin_King kevin.king@example.com",
         "insert 29 Amanda_Davis amanda.davis@example.com",
         "insert 34 John_Snow john.snow@example.com"
         "insert 15 Ryan_Garcia ryan.garcia@example.com",
@@ -288,6 +287,7 @@ TEST_F(DB_TEST, Insert40Rows)
         "insert 32 Jeffrey_Torres jeffrey.torres@example.com",
         "insert 18 Matthew_Anderson matthew.anderson@example.com",
         "insert 16 Christopher_Gonzalez christopher.gonzalez@example.com",
+        "insert 230 Jessica_Miller jessica.miller@example.com",
     };
 
     std::vector<std::string> expect;
@@ -298,11 +298,11 @@ TEST_F(DB_TEST, Insert40Rows)
     commands.push_back("select");
     commands.push_back(".exit");
 
-    Database databaseTest(argc_global, argv_global);
+    Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
     std::vector<std::string> out = outputCapturer.getOutputs();
-    std::vector<std::string> outSelect(out.begin() + 39, out.end());
+    std::vector<std::string> outSelect(out.begin() + 38, out.end());
 
     EXPECT_EQ(expect, outSelect);
 }
@@ -317,7 +317,7 @@ TEST_F(DB_TEST, InsertDuplicateKey)
         "Error: Duplicate key.",
     };
 
-    Database databaseTest(argc_global, argv_global);
+    Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
     ASSERT_EQ(expect, outputCapturer.getOutputs());
@@ -325,10 +325,10 @@ TEST_F(DB_TEST, InsertDuplicateKey)
 
 int main(int argc, char** argv) 
 {
-    argc_global = argc;
-    argv_global = argv;
+    argcGlobal = argc;
+    argvGlobal = argv;
     // Initialize the Google Test framework
-    testing::InitGoogleTest(&argc_global, argv_global);
+    testing::InitGoogleTest(&argcGlobal, argvGlobal);
     // Run all tests
     return RUN_ALL_TESTS();
 }

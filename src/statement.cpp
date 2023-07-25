@@ -3,22 +3,22 @@
 
 // META COMMANDS
 
-MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer, 
+MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer> inputBuffer, 
                                   const std::shared_ptr<Table>& table)
 {
-	if (input_buffer->getBuffer() == ".exit")
+	if (inputBuffer->getBuffer() == ".exit")
 	{
-        db_close(table);
+        closeDatabase(table);
 		exit(EXIT_SUCCESS);
 	}
-    else if (input_buffer->getBuffer() == ".btree")
+    else if (inputBuffer->getBuffer() == ".btree")
     {
-        print_tree(table->pager, 0, 0);
+        printTree(table->pager, 0, 0);
         return META_COMMAND_SUCCESS;
     }
-    else if (input_buffer->getBuffer() == ".constants")
+    else if (inputBuffer->getBuffer() == ".constants")
     {
-        print_constants();
+        printConstants();
         return META_COMMAND_SUCCESS;
     }
 	else
@@ -27,7 +27,7 @@ MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer> input_buffer,
 	}
 }
 
-void print_constants()
+void printConstants()
 {
     std::cout << "Constants:" << std::endl;
     std::cout << "ROW_SIZE: " << ROW_SIZE << std::endl;
@@ -38,6 +38,7 @@ void print_constants()
     std::cout << "LEAF_NODE_MAX_CELLS: " << LEAF_NODE_MAX_CELLS << std::endl;
 }
 
+// Utility function to plrint spaces for printTree
 void indent(uint32_t level) 
 {
     for (uint32_t i = 0; i < level; i++) 
@@ -46,38 +47,38 @@ void indent(uint32_t level)
     }
 }
 
-void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level) {
-    void* node = pager->get_page(page_num);
-    uint32_t num_keys, child;
+void printTree(Pager* pager, uint32_t pageNumber, uint32_t indentation_level) {
+    void* node = pager->getPage(pageNumber);
+    uint32_t keyCount, child;
 
-    switch (get_node_type(node)) 
+    switch (nodeGetType(node)) 
     {
         case (NODE_LEAF):
-            num_keys = *leaf_node_num_cells(node);
+            keyCount = *leafGetCellCount(node);
             indent(indentation_level);
-            std::cout << "- leaf (size " << num_keys << ")\n";
-            for (uint32_t i = 0; i < num_keys; i++)
+            std::cout << "- leaf (size " << keyCount << ")\n";
+            for (uint32_t i = 0; i < keyCount; i++)
             {
                 indent(indentation_level + 1);
-                std::cout << "- " << *leaf_node_key(node, i) << "\n";
+                std::cout << "- " << *leafGetKey(node, i) << "\n";
             }
             break;
         case (NODE_INTERNAL):
-            num_keys = *internal_node_num_keys(node);
+            keyCount = *internalGetKeyCount(node);
             indent(indentation_level);
-            std::cout << "- internal (size " << num_keys << ")\n";
-            if (num_keys > 0)
+            std::cout << "- internal (size " << keyCount << ")\n";
+            if (keyCount > 0)
             {
-                for (uint32_t i = 0; i < num_keys; i++)
+                for (uint32_t i = 0; i < keyCount; i++)
                 {
-                    child = *internal_node_child(node, i);
-                    print_tree(pager, child, indentation_level + 1);
+                    child = *internalGetChild(node, i);
+                    printTree(pager, child, indentation_level + 1);
 
                     indent(indentation_level + 1);
-                    std::cout << "- key " << *internal_node_key(node, i) << "\n";
+                    std::cout << "- key " << *internalGetKey(node, i) << "\n";
                 }
-                child = *internal_node_right_child(node);
-                print_tree(pager, child, indentation_level + 1);
+                child = *internalGetRightChild(node);
+                printTree(pager, child, indentation_level + 1);
             }
             break;
     }
@@ -88,13 +89,13 @@ void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level) {
 
 Statement::Statement() : type() { };
 
-PrepareResult Statement::prepare_statement(InputBuffer* input_buffer)
+PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
 {
-	if (input_buffer->getBuffer().compare(0, 6, "insert", 0, 6) == 0)
+	if (inputBuffer->getBuffer().compare(0, 6, "insert", 0, 6) == 0)
 	{
 		type = STATEMENT_INSERT;
 
-		std::string args = input_buffer->getBuffer();
+		std::string args = inputBuffer->getBuffer();
 		std::stringstream argStream(args.substr(6, args.size()));
 
         int32_t tmpId;
@@ -118,14 +119,14 @@ PrepareResult Statement::prepare_statement(InputBuffer* input_buffer)
             return PREPARE_STRING_TOO_LONG;
         }
 
-        row_to_insert.id = tmpId;
-        strcpy_s(row_to_insert.email, tmpEmail.c_str());
-        strcpy_s(row_to_insert.username, tmpUsername.c_str());
+        rowToInsert.id = tmpId;
+        strcpy_s(rowToInsert.email, tmpEmail.c_str());
+        strcpy_s(rowToInsert.username, tmpUsername.c_str());
 
 		return PREPARE_SUCCESS;
 	}
 
-	if (input_buffer->getBuffer() == "select")
+	if (inputBuffer->getBuffer() == "select")
 	{
 		type = STATEMENT_SELECT;
 		return PREPARE_SUCCESS;
@@ -134,52 +135,52 @@ PrepareResult Statement::prepare_statement(InputBuffer* input_buffer)
 	return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
-ExecuteResult Statement::execute_insert(std::shared_ptr<Table>& table)
+ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
 {
     // Point cursor at the position for a new key 
-	uint32_t key_to_insert = this->row_to_insert.id;
-    std::unique_ptr<Cursor> cursor = table_find(table, key_to_insert);
+	uint32_t keyToInsert = this->rowToInsert.id;
+    std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToInsert);
 
-    void* node = table->pager->get_page(cursor->page_num);
-    uint32_t num_cells = *leaf_node_num_cells(node);
+    void* node = table->pager->getPage(cursor->pageNumber);
+    uint32_t cellCount = *leafGetCellCount(node);
 
-    if (cursor->cell_num < num_cells)
+    if (cursor->cellCount < cellCount)
     {
-        uint32_t key_at_index = *leaf_node_key(node, cursor->cell_num);
-        if (key_at_index == key_to_insert)
+        uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
+        if (keyAtIndex == keyToInsert)
         {
             return EXECUTE_DUPLICATE_KEY;
         }
     }
 
-	leaf_node_insert(cursor, this->row_to_insert.id, &row_to_insert);
+	leafInsert(cursor, this->rowToInsert.id, &rowToInsert);
 
 	return EXECUTE_SUCCESS;
 }
 
-ExecuteResult Statement::execute_select(std::shared_ptr<Table>& table)
+ExecuteResult Statement::executeSelect(std::shared_ptr<Table>& table)
 {
-    std::unique_ptr<Cursor> cursor = table_start(table);
+    std::unique_ptr<Cursor> cursor = tableStart(table);
 
 	Row row;
-	while (!(cursor->end_of_table))
+	while (!(cursor->endOfTable))
 	{
-		deserialize_row(cursor_value(cursor), &row);
+		deserialize_row(cursorValue(cursor), &row);
 		print_row(&row);
-        cursor_advance(cursor);
+        cursorAdvance(cursor);
 	}
 
 	return EXECUTE_SUCCESS;
 }
 
-ExecuteResult Statement::execute_statement(std::shared_ptr<Table>& table)
+ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
 {
 	switch (type)
 	{
 	case (STATEMENT_INSERT):
-		return execute_insert(table);
+		return executeInsert(table);
 	case (STATEMENT_SELECT):
-		return execute_select(table);
+		return executeSelect(table);
 	}
 }
 
@@ -190,5 +191,5 @@ const StatementType Statement::getStatement() const
 
 const Row Statement::getRow() const
 {
-	return row_to_insert;
+	return rowToInsert;
 }

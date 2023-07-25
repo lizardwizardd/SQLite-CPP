@@ -19,13 +19,13 @@ typedef enum {
 	META_COMMAND_UNRECOGNIZED_COMMAND
 } MetaCommandResult;
 
-MetaCommandResult do_meta_command(std::shared_ptr<InputBuffer>, const std::shared_ptr<Table>&);
+MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer>, const std::shared_ptr<Table>&);
 
-void print_constants();
+void printConstants();
 
 void indent(uint32_t level);
 
-void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level);
+void printTree(Pager* pager, uint32_t pageNumber, uint32_t indentation_level);
 
 // STATEMENTS
 
@@ -55,18 +55,18 @@ class Statement
 private:
 	StatementType type;
 
-	Row row_to_insert;
+	Row rowToInsert;
 
 public:
 	Statement();
 
-	PrepareResult prepare_statement(InputBuffer*);
+	PrepareResult prepareStatement(InputBuffer*);
 
-	ExecuteResult execute_insert(std::shared_ptr<Table>& table);
+	ExecuteResult executeInsert(std::shared_ptr<Table>& table);
 
-	static ExecuteResult execute_select(std::shared_ptr<Table>& table);
+	static ExecuteResult executeSelect(std::shared_ptr<Table>& table);
 
-	ExecuteResult execute_statement(std::shared_ptr<Table>& table);
+	ExecuteResult executeStatement(std::shared_ptr<Table>& table);
 
 	const StatementType getStatement() const;
 

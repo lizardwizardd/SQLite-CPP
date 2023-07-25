@@ -13,16 +13,16 @@ class InputBuffer
 {
 private:
     std::string buffer;
-    size_t input_length;
+    size_t inputLength;
 
 public:
     InputBuffer();
 
-    void read_input();
-    void read_input_test(std::vector<std::string> &commands);
+    void readInput();
+    void readInputTest(std::vector<std::string> &commands);
 
     const std::string getBuffer() const;
     const size_t getLength() const;
 };
 
-void print_prompt();
+void printPrompt();

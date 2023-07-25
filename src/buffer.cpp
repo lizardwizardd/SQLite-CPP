@@ -1,9 +1,10 @@
 #include "../includes/buffer.h"
 
 
-InputBuffer::InputBuffer() : buffer(""), input_length(0) { }
+InputBuffer::InputBuffer() : buffer(""), inputLength(0) { }
 
-void InputBuffer::read_input()
+// Read console input
+void InputBuffer::readInput()
 {
 	std::getline(std::cin, buffer);
 
@@ -18,7 +19,7 @@ void InputBuffer::read_input()
 		buffer.pop_back();
 	}
 
-	input_length = buffer.size();
+	inputLength = buffer.size();
 }
 
 const std::string InputBuffer::getBuffer() const
@@ -28,10 +29,10 @@ const std::string InputBuffer::getBuffer() const
 
 const size_t InputBuffer::getLength() const
 {
-	return input_length;
+	return inputLength;
 }
 
-void print_prompt()
+void printPrompt()
 {
 	std::cout << "db > ";
 }

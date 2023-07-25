@@ -13,40 +13,40 @@ typedef enum { NODE_INTERNAL, NODE_LEAF } NodeType;
 
 // TODO: Node class, derived classes InternalNode and LeafNode
 
-uint32_t* leaf_node_num_cells(void* node);
+uint32_t* leafGetCellCount(void* node);
 
-void* leaf_node_cell(void* node, uint32_t cell_num);
+void* LeafGetCell(void* node, uint32_t cellCount);
 
-uint32_t* leaf_node_key(void* node, uint32_t cell_num);
+uint32_t* leafGetKey(void* node, uint32_t cellCount);
 
-void* leaf_node_value(void* node, uint32_t cell_num);
+void* leafGetValue(void* node, uint32_t cellCount);
 
-uint32_t* leaf_node_next_leaf(void* node);
+uint32_t* leafGetNextLeaf(void* node);
 
-void initialize_leaf_node(void* node);
+void leafInitialize(void* node);
 
-NodeType get_node_type(void* node);
+NodeType nodeGetType(void* node);
 
-void set_node_type(void* node, NodeType type);
+void nodeSetType(void* node, NodeType type);
 
-uint32_t* internal_node_num_keys(void* node);
+uint32_t* internalGetKeyCount(void* node);
 
-uint32_t* internal_node_right_child(void* node);
+uint32_t* internalGetRightChild(void* node);
 
-uint32_t* internal_node_cell(void* node, uint32_t cell_num);
+uint32_t* internalGetCell(void* node, uint32_t cellCount);
 
-uint32_t* internal_node_child(void* node, uint32_t child_num);
+uint32_t* internalGetChild(void* node, uint32_t child_num);
 
-uint32_t* internal_node_key(void* node, uint32_t key_num);
+uint32_t* internalGetKey(void* node, uint32_t key_num);
 
-bool is_node_root(void* node);
+bool isRootNode(void* node);
 
-void set_node_root(void* node, bool is_root);
+void setRootNode(void* node, bool is_root);
 
-void initialize_internal_node(void* node);
+void internalInitialize(void* node);
 
-uint32_t* node_parent(void* node);
+uint32_t* getParent(void* node);
 
-void update_internal_node_key(void* node, uint32_t old_key, uint32_t new_key);
+void internalUpdateKey(void* node, uint32_t old_key, uint32_t new_key);
 
-uint32_t internal_node_find_child(void* node, uint32_t key);
+uint32_t internalFindChild(void* node, uint32_t key);

@@ -14,7 +14,7 @@ class Database
 {
 private:
     std::shared_ptr<Table> table;
-    std::shared_ptr<InputBuffer> input_buffer;
+    std::shared_ptr<InputBuffer> inputBuffer;
 
     int argc;
     char** argv;
