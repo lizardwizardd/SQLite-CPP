@@ -104,8 +104,8 @@ uint32_t* internalGetChild(void* node, uint32_t child_num)
 // Get one of internal node keys by number
 uint32_t* internalGetKey(void* node, uint32_t key_num)
 {
-    char* charPtr = reinterpret_cast<char*>(internalGetCell(node, key_num) + INTERNAL_NODE_CHILD_SIZE);
-    return reinterpret_cast<uint32_t*>(charPtr);
+    char* charPtr = reinterpret_cast<char*>(internalGetCell(node, key_num));
+    return reinterpret_cast<uint32_t*>(charPtr + INTERNAL_NODE_CHILD_SIZE);
 }
 
 bool isRootNode(void* node) 
