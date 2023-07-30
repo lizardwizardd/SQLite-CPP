@@ -41,7 +41,11 @@ std::unique_ptr<Cursor> tableFindKey(std::shared_ptr<Table>& table, uint32_t key
 
 std::shared_ptr<Table> openDatabase(std::string filename);
 
-void closeDatabase(const std::shared_ptr<Table>& table);
+std::shared_ptr<Table> createDatabase(std::string filename);
+
+void saveAndCloseDatabase(const std::shared_ptr<Table>& table);
+
+void saveDatabase(const std::shared_ptr<Table>& table);
 
 void* cursorValue(std::unique_ptr<Cursor>& cursor);
 

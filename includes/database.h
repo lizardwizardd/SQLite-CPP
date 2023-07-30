@@ -13,7 +13,9 @@
 class Database 
 {
 private:
-    std::shared_ptr<Table> table;
+    // With current implementation, every time a new table is accessed,
+    // old table gets saved and removed from cache, and a new one gets cached.
+    std::shared_ptr<Table> cachedTable;
     std::shared_ptr<InputBuffer> inputBuffer;
 
     int argc;

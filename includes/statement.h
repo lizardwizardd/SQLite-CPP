@@ -30,9 +30,11 @@ void printTree(Pager* pager, uint32_t pageNumber, uint32_t indentation_level);
 // STATEMENTS
 
 typedef enum 
-{ 
-    STATEMENT_INSERT, 
-    STATEMENT_SELECT 
+{
+    STATEMENT_CREATE,
+    STATEMENT_INSERT,
+    STATEMENT_SELECT,
+    STATEMENT_OPEN
 } StatementType;
 
 typedef enum { 
@@ -46,7 +48,12 @@ typedef enum {
 typedef enum { 
     EXECUTE_SUCCESS, 
     EXECUTE_DUPLICATE_KEY, 
-    EXECUTE_TABLE_FULL 
+    EXECUTE_TABLE_FULL,
+    EXECUTE_ERROR_WHILE_CREATING,
+    EXECUTE_ERROR_WHILE_OPENING,
+    EXECUTE_TABLE_NOT_SELECTED,
+    EXECUTE_ERROR_FILE_EXISTS,
+    EXECUTE_ERROR_FILE_NOT_FOUND
 } ExecuteResult;
 
 
@@ -57,10 +64,16 @@ private:
 
 	Row rowToInsert;
 
+    std::string tableName;
+
 public:
 	Statement();
 
 	PrepareResult prepareStatement(InputBuffer*);
+
+    ExecuteResult executeCreate(std::shared_ptr<Table>& table);
+
+    ExecuteResult executeOpen(std::shared_ptr<Table>& table);
 
 	ExecuteResult executeInsert(std::shared_ptr<Table>& table);
 
@@ -69,6 +82,8 @@ public:
 	ExecuteResult executeStatement(std::shared_ptr<Table>& table);
 
 	const StatementType getStatement() const;
+
+    const std::string getTableName() const;
 
 	const Row getRow() const;
 };

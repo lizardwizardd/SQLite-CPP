@@ -49,20 +49,13 @@ void Database::runTest(std::vector<std::string>& commands)
 {
     std::reverse(commands.begin(), commands.end());
 
-    if (argc < 2)
-    {
-        throw std::runtime_error("Must supply a database filename.");
-    }
-
-    std::string filename = argv[1];
-    table = std::move(openDatabase(filename));
     inputBuffer = std::make_shared<InputBuffer>();
 
     while (!commands.empty())
     {
         if (commands.back() == ".exit")
         {
-            closeDatabase(table);
+            saveAndCloseDatabase(cachedTable);
             return;
         }
         // print_prompt(); 
@@ -158,6 +151,9 @@ void getExpect(std::vector<std::string>& commands, std::vector<std::string>& exp
     }
 }
 
+//
+// TESTS
+//
 
 TEST_F(DB_TEST, InsertAndSelect)
 {
@@ -175,7 +171,7 @@ TEST_F(DB_TEST, InsertAndSelect)
     Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
-    ASSERT_EQ(expect, outputCapturer.getOutputs());
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
 TEST_F(DB_TEST, PersistenceBetweenFiles)
@@ -192,7 +188,7 @@ TEST_F(DB_TEST, PersistenceBetweenFiles)
     Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
-    ASSERT_EQ(expect, outputCapturer.getOutputs());
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
 TEST_F(DB_TEST, InsertStringTooLong)
@@ -208,7 +204,7 @@ TEST_F(DB_TEST, InsertStringTooLong)
     Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
-    ASSERT_EQ("Error: String is too long.", outputCapturer.getOutputs().back());
+    EXPECT_EQ("Error: String is too long.", outputCapturer.getOutputs().back());
 }
 
 TEST_F(DB_TEST, ErrorWhenNegativeId)
@@ -221,7 +217,7 @@ TEST_F(DB_TEST, ErrorWhenNegativeId)
     Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
-    ASSERT_EQ("Error: ID must be positive.", outputCapturer.getOutputs().back());
+    EXPECT_EQ("Error: ID must be positive.", outputCapturer.getOutputs().back());
 }
 
 TEST_F(DB_TEST, PrintConstants)
@@ -320,7 +316,7 @@ TEST_F(DB_TEST, InsertDuplicateKey)
     Database databaseTest(argcGlobal, argvGlobal);
     databaseTest.runTest(commands);
 
-    ASSERT_EQ(expect, outputCapturer.getOutputs());
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
 int main(int argc, char** argv) 

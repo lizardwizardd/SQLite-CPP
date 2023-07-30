@@ -8,8 +8,14 @@ MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer> inputBuffer,
 {
 	if (inputBuffer->getBuffer() == ".exit")
 	{
-        closeDatabase(table);
+        saveAndCloseDatabase(table);
 		exit(EXIT_SUCCESS);
+	}
+    if (inputBuffer->getBuffer() == ".save")
+	{
+        saveDatabase(table);
+		std::cout << "Executed." << std::endl;
+        return META_COMMAND_SUCCESS;
 	}
     else if (inputBuffer->getBuffer() == ".btree")
     {
@@ -26,6 +32,232 @@ MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer> inputBuffer,
 		return META_COMMAND_UNRECOGNIZED_COMMAND;
 	}
 }
+
+// STATEMENTS
+
+Statement::Statement() : type(), tableName("") { };
+
+PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
+{
+    if (inputBuffer->getBuffer().compare(0, 12, "create table", 0, 12) == 0)
+    {
+        type = STATEMENT_CREATE;
+
+        std::string args = inputBuffer->getBuffer();
+        std::stringstream argStream(args.substr(12, args.size()));
+
+        std::string _tableName;
+
+        if (!(argStream >> _tableName))
+        {
+            return PREPARE_SYNTAX_ERROR;
+        }
+
+        this->tableName = _tableName;
+
+        return PREPARE_SUCCESS;
+    }
+    else if (inputBuffer->getBuffer().compare(0, 10, "open table", 0, 10) == 0)
+    {
+        type = STATEMENT_OPEN;
+
+        std::string args = inputBuffer->getBuffer();
+        std::stringstream argStream(args.substr(10, args.size()));
+
+        std::string _tableName;
+
+        if (!(argStream >> _tableName))
+        {
+            return PREPARE_SYNTAX_ERROR;
+        }
+
+        this->tableName = _tableName;
+
+        return PREPARE_SUCCESS;
+    }
+	else if (inputBuffer->getBuffer().compare(0, 6, "insert", 0, 6) == 0)
+	{
+		type = STATEMENT_INSERT;
+
+		std::string args = inputBuffer->getBuffer();
+		std::stringstream argStream(args.substr(6, args.size()));
+
+        int32_t _id;
+        std::string _username;
+        std::string _email;
+
+		if (!(argStream >> _id >> _username >> _email))
+		{
+			return PREPARE_SYNTAX_ERROR;
+		}
+        if (_id < 1)
+        {
+            return PREPARE_NEGATIVE_ID;
+        }
+        if (_email.size() > COLUMN_EMAIL_SIZE)
+        {
+            return PREPARE_STRING_TOO_LONG;
+        }
+        if (_username.size() > COLUMN_USERNAME_SIZE)
+        {
+            return PREPARE_STRING_TOO_LONG;
+        }
+
+        rowToInsert.id = _id;
+        strcpy_s(rowToInsert.email, _email.c_str());
+        strcpy_s(rowToInsert.username, _username.c_str());
+
+		return PREPARE_SUCCESS;
+	}
+
+	if (inputBuffer->getBuffer() == "select")
+	{
+		type = STATEMENT_SELECT;
+		return PREPARE_SUCCESS;
+	}
+
+	return PREPARE_UNRECOGNIZED_STATEMENT;
+}
+
+// Change cached table to the new one if created successfully,
+// don't change chached table if an error occured
+ExecuteResult Statement::executeCreate(std::shared_ptr<Table>& table)
+{
+    std::shared_ptr<Table> _table;
+    try
+    {
+        _table = std::move(createDatabase(tableName + ".db"));
+    }
+    catch (...)
+    {
+        if (GetLastError() == ERROR_FILE_EXISTS)
+        {
+            return EXECUTE_ERROR_FILE_EXISTS;
+        }
+        else
+        {
+            return EXECUTE_ERROR_WHILE_CREATING;
+        }
+    }
+
+    // New table created successfully
+    if (table != nullptr)
+        saveAndCloseDatabase(table);
+    table = _table;
+
+    return EXECUTE_SUCCESS;
+}
+
+// Change cached table to the new one if opened successfully,
+// don't change chached table if an error occured
+ExecuteResult Statement::executeOpen(std::shared_ptr<Table>& table)
+{
+    std::shared_ptr<Table> _table;
+    try
+    {
+        _table = std::move(openDatabase(tableName + ".db"));
+    }
+    catch (...)
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        {
+            return EXECUTE_ERROR_FILE_NOT_FOUND;
+        }
+        else
+        {
+            return EXECUTE_ERROR_WHILE_OPENING;
+        }
+    }
+
+    // New table opened successfully
+    if (table != nullptr)
+        saveAndCloseDatabase(table);
+    table = _table;
+
+    return EXECUTE_SUCCESS;
+}
+
+ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
+{
+    if (table == nullptr)
+    {
+        return EXECUTE_TABLE_NOT_SELECTED;
+    }
+
+    // Point cursor at the position for a new key 
+	uint32_t keyToInsert = this->rowToInsert.id;
+    std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToInsert);
+
+    void* node = table->pager->getPage(cursor->pageNumber);
+    uint32_t cellCount = *leafGetCellCount(node);
+
+    if (cursor->cellCount < cellCount)
+    {
+        uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
+        if (keyAtIndex == keyToInsert)
+        {
+            return EXECUTE_DUPLICATE_KEY;
+        }
+    }
+
+	leafInsert(cursor, this->rowToInsert.id, &rowToInsert);
+
+	return EXECUTE_SUCCESS;
+}
+
+ExecuteResult Statement::executeSelect(std::shared_ptr<Table>& table)
+{
+    if (table == nullptr)
+    {
+        return EXECUTE_TABLE_NOT_SELECTED;
+    }
+
+    std::unique_ptr<Cursor> cursor = tableStart(table);
+
+	Row row;
+	while (!(cursor->endOfTable))
+	{
+		deserialize_row(cursorValue(cursor), &row);
+		print_row(&row);
+        cursorAdvance(cursor);
+	}
+
+	return EXECUTE_SUCCESS;
+}
+
+ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
+{
+	switch (type)
+	{
+    case(STATEMENT_CREATE):
+        return executeCreate(table);
+	case (STATEMENT_INSERT):
+		return executeInsert(table);
+	case (STATEMENT_SELECT):
+		return executeSelect(table);
+    case(STATEMENT_OPEN):
+        return executeOpen(table);
+    default:
+        throw std::exception("Unknown statement.");
+	}
+}
+
+const StatementType Statement::getStatement() const
+{
+	return this->type;
+}
+
+const Row Statement::getRow() const
+{
+	return this->rowToInsert;
+}
+
+const std::string Statement::getTableName() const
+{
+    return this->tableName;
+}
+
+// DEBUG FUNCTIONS
 
 void printConstants()
 {
@@ -83,113 +315,4 @@ void printTree(Pager* pager, uint32_t pageNumber, uint32_t indentation_level) {
             break;
     }
     std::cout << std::flush;
-}
-
-// STATEMENTS
-
-Statement::Statement() : type() { };
-
-PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
-{
-	if (inputBuffer->getBuffer().compare(0, 6, "insert", 0, 6) == 0)
-	{
-		type = STATEMENT_INSERT;
-
-		std::string args = inputBuffer->getBuffer();
-		std::stringstream argStream(args.substr(6, args.size()));
-
-        int32_t tmpId;
-        std::string tmpUsername;
-        std::string tmpEmail;
-
-		if (!(argStream >> tmpId >> tmpUsername >> tmpEmail))
-		{
-			return PREPARE_SYNTAX_ERROR;
-		}
-        if (tmpId < 1)
-        {
-            return PREPARE_NEGATIVE_ID;
-        }
-        if (tmpEmail.size() > COLUMN_EMAIL_SIZE)
-        {
-            return PREPARE_STRING_TOO_LONG;
-        }
-        if (tmpUsername.size() > COLUMN_USERNAME_SIZE)
-        {
-            return PREPARE_STRING_TOO_LONG;
-        }
-
-        rowToInsert.id = tmpId;
-        strcpy_s(rowToInsert.email, tmpEmail.c_str());
-        strcpy_s(rowToInsert.username, tmpUsername.c_str());
-
-		return PREPARE_SUCCESS;
-	}
-
-	if (inputBuffer->getBuffer() == "select")
-	{
-		type = STATEMENT_SELECT;
-		return PREPARE_SUCCESS;
-	}
-
-	return PREPARE_UNRECOGNIZED_STATEMENT;
-}
-
-ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
-{
-    // Point cursor at the position for a new key 
-	uint32_t keyToInsert = this->rowToInsert.id;
-    std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToInsert);
-
-    void* node = table->pager->getPage(cursor->pageNumber);
-    uint32_t cellCount = *leafGetCellCount(node);
-
-    if (cursor->cellCount < cellCount)
-    {
-        uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
-        if (keyAtIndex == keyToInsert)
-        {
-            return EXECUTE_DUPLICATE_KEY;
-        }
-    }
-
-	leafInsert(cursor, this->rowToInsert.id, &rowToInsert);
-
-	return EXECUTE_SUCCESS;
-}
-
-ExecuteResult Statement::executeSelect(std::shared_ptr<Table>& table)
-{
-    std::unique_ptr<Cursor> cursor = tableStart(table);
-
-	Row row;
-	while (!(cursor->endOfTable))
-	{
-		deserialize_row(cursorValue(cursor), &row);
-		print_row(&row);
-        cursorAdvance(cursor);
-	}
-
-	return EXECUTE_SUCCESS;
-}
-
-ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
-{
-	switch (type)
-	{
-	case (STATEMENT_INSERT):
-		return executeInsert(table);
-	case (STATEMENT_SELECT):
-		return executeSelect(table);
-	}
-}
-
-const StatementType Statement::getStatement() const
-{
-	return type;
-}
-
-const Row Statement::getRow() const
-{
-	return rowToInsert;
 }

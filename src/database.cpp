@@ -1,14 +1,14 @@
 #include "../includes/database.h"
 
 Database::Database(int argc, char** argv) :
-    argc(argc), argv(argv), table(nullptr),  inputBuffer(nullptr) {}
+    argc(argc), argv(argv), cachedTable(nullptr),  inputBuffer(nullptr) {}
 
 Database::~Database()
 { }
 
 void Database::handleMetaCommand()
 {
-    switch (doMetaCommand(inputBuffer, table))
+    switch (doMetaCommand(inputBuffer, cachedTable))
     {
         case META_COMMAND_SUCCESS:
             break;
@@ -41,9 +41,11 @@ void Database::handleStatement()
             printErrorMessage("Unrecognized keyword at the start of "+ 
                                inputBuffer->getBuffer());
             return;
+        default:
+            throw std::exception("Unknown statement.");
     }
 
-    switch (statement.executeStatement(table))
+    switch (statement.executeStatement(cachedTable))
     {
         case EXECUTE_SUCCESS:
             std::cout << "Executed." << std::endl;
@@ -54,6 +56,23 @@ void Database::handleStatement()
         case EXECUTE_TABLE_FULL:
             std::cout << "Error: Table full." << std::endl;
             break;
+        case EXECUTE_ERROR_WHILE_CREATING:
+            std::cout << "Error: Failed to create a table. " << std::endl;
+            break;
+        case EXECUTE_ERROR_WHILE_OPENING:
+            std::cout << "Error: Failed to open a table. Error code: " << GetLastError() << std::endl;
+            break;
+        case EXECUTE_TABLE_NOT_SELECTED:
+            std::cout << "Error: Table not opened. Use \"create/open table [name]\" to create/open a table" << std::endl;
+            break;
+        case EXECUTE_ERROR_FILE_NOT_FOUND:
+            std::cout << "Error: Table with the name \"" + statement.getTableName() + ".db\" was not found." << std::endl;
+            break;
+        case EXECUTE_ERROR_FILE_EXISTS:
+            std::cout << "Error: Table with the name \"" + statement.getTableName() + ".db\" already exists." << std::endl;
+            break;
+        default:
+            throw std::exception("Unknown statement result.");
     }
 }
 
@@ -64,13 +83,6 @@ void Database::printErrorMessage(const std::string& message)
 
 void Database::run()
 {
-    if (argc < 2)
-    {
-        throw std::runtime_error("Must supply a database filename.");
-    }
-
-    std::string filename = argv[1];
-    table = std::move(openDatabase(filename));
     inputBuffer = std::make_shared<InputBuffer>();
 
     while (true)

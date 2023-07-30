@@ -39,3 +39,5 @@ public:
 };
 
 Pager* openPager(std::string filename);
+
+Pager* createPager(std::string filename);

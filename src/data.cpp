@@ -54,17 +54,17 @@ std::unique_ptr<Cursor> tableFindKey(std::shared_ptr<Table>& table, uint32_t key
 
 std::shared_ptr<Table> openDatabase(std::string filename)
 {
-    Pager* pager = openPager(filename);
+    Pager* _pager = openPager(filename);
 
+    // TODO: a constructor for this
     std::shared_ptr<Table> table = std::make_unique<Table>();
-
-    table->pager = pager;
+    table->pager = _pager;
     table->rootPageNumber = 0;
 
-    if (pager->pageCount == 0)
+    if (_pager->pageCount == 0)
     {
         // New database file. Initialize page 0 as leaf node
-        void* rootNode = pager->getPage(0);
+        void* rootNode = _pager->getPage(0);
         leafInitialize(rootNode);
         setRootNode(rootNode, true);
     }
@@ -72,7 +72,28 @@ std::shared_ptr<Table> openDatabase(std::string filename)
     return table;
 }
 
-void closeDatabase(const std::shared_ptr<Table>& table)
+std::shared_ptr<Table> createDatabase(std::string filename)
+{
+    Pager* _pager = createPager(filename);
+
+    // TODO: a constructor for this
+    std::shared_ptr<Table> table = std::make_unique<Table>();
+    table->pager = _pager;
+    table->rootPageNumber = 0;
+
+    if (_pager->pageCount == 0)
+    {
+        // New database file. Initialize page 0 as leaf node
+        void* rootNode = _pager->getPage(0);
+        leafInitialize(rootNode);
+        setRootNode(rootNode, true);
+    }
+
+    return table;
+}
+
+// Save, then free memorн and close table
+void saveAndCloseDatabase(const std::shared_ptr<Table>& table)
 {
     Pager* pager = table->pager;
 
@@ -102,6 +123,21 @@ void closeDatabase(const std::shared_ptr<Table>& table)
         }
     }
     delete pager;
+}
+
+// Save table without closing
+void saveDatabase(const std::shared_ptr<Table>& table)
+{
+    Pager* pager = table->pager;
+
+    for (uint32_t i = 0; i < pager->pageCount; i++)
+    {
+        if (pager->pages[i] == NULL)
+        {
+            continue;
+        }
+        pager->pagerFlush(i);
+    }
 }
 
 void* cursorValue(std::unique_ptr<Cursor>& cursor)
@@ -178,7 +214,7 @@ void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* valu
 
     // After dividing all keys between left and right nodes,
     // move each key to correct position, starting from the right
-    for (int32_t i = LEAF_NODE_MAX_CELLS; i >= 0; i--) 
+    for (uint32_t i = LEAF_NODE_MAX_CELLS; i >= 0; i--) 
     {
         void* destinationNode;
         if (i >= LEAF_NODE_LEFT_SPLIT_COUNT) 
@@ -291,7 +327,7 @@ void createNewRootNode(std::shared_ptr<Table>& table, uint32_t rightChildPageNum
     if (nodeGetType(leftChild) == NODE_INTERNAL) 
     {
         void* child;
-        for (int i = 0; i < *internalGetKeyCount(leftChild); i++)
+        for (uint32_t i = 0; i < *internalGetKeyCount(leftChild); i++)
         {
             child = table->pager->getPage(*internalGetChild(leftChild,i));
             *getParent(child) = leftChildPageNumber;
@@ -327,6 +363,8 @@ std::unique_ptr<Cursor> findInternalNode(std::shared_ptr<Table>& table,
             return findLeafNode(table, childNum, key);
         case NODE_INTERNAL:
             return findInternalNode(table, childNum, key);
+        default:
+            throw std::exception("Unknown node type.");
     }
 }
 
