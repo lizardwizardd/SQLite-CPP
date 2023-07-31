@@ -13,7 +13,7 @@ MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer> inputBuffer,
 	}
     if (inputBuffer->getBuffer() == ".save")
 	{
-        saveDatabase(table);
+        saveTable(table);
 		std::cout << "Executed." << std::endl;
         return META_COMMAND_SUCCESS;
 	}
@@ -60,6 +60,24 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
     else if (inputBuffer->getBuffer().compare(0, 10, "open table", 0, 10) == 0)
     {
         type = STATEMENT_OPEN;
+
+        std::string args = inputBuffer->getBuffer();
+        std::stringstream argStream(args.substr(10, args.size()));
+
+        std::string _tableName;
+
+        if (!(argStream >> _tableName))
+        {
+            return PREPARE_SYNTAX_ERROR;
+        }
+
+        this->tableName = _tableName;
+
+        return PREPARE_SUCCESS;
+    }
+    else if (inputBuffer->getBuffer().compare(0, 10, "drop table", 0, 10) == 0)
+    {
+        type = STATEMENT_DROP;
 
         std::string args = inputBuffer->getBuffer();
         std::stringstream argStream(args.substr(10, args.size()));
@@ -177,6 +195,48 @@ ExecuteResult Statement::executeOpen(std::shared_ptr<Table>& table)
     return EXECUTE_SUCCESS;
 }
 
+ExecuteResult Statement::executeDrop(std::shared_ptr<Table>& table)
+{
+    this->attempts++;
+    try
+    {
+        dropDatabase(tableName + ".db");
+    }
+    catch (...)
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        {
+            return EXECUTE_ERROR_FILE_NOT_FOUND;
+        }
+        // SHARING_VIOLATION happens when file can't be accessed
+        // because it's currently open
+        else if (GetLastError() == ERROR_SHARING_VIOLATION)
+        {
+            // Close file first
+            CloseHandle(table->pager->fileHandle);
+
+            // Check the attempt count to avoid infinite loop
+            if (this->attempts > 2)
+                throw std::runtime_error("Failed to access the file.");
+
+            // Free cached table before closing
+            freeTable(table);
+
+            // Try again
+            executeDrop(table);
+
+            // Assign cached table to nullptr
+            table = nullptr;
+        }
+        else
+        {
+            return EXECUTE_ERROR_WHILE_DROPPING;
+        }
+    }
+
+    return EXECUTE_SUCCESS;
+}
+
 ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
 {
     if (table == nullptr)
@@ -237,6 +297,8 @@ ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
 		return executeSelect(table);
     case(STATEMENT_OPEN):
         return executeOpen(table);
+    case(STATEMENT_DROP):
+        return executeDrop(table);
     default:
         throw std::exception("Unknown statement.");
 	}

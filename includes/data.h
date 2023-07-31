@@ -43,9 +43,13 @@ std::shared_ptr<Table> openDatabase(std::string filename);
 
 std::shared_ptr<Table> createDatabase(std::string filename);
 
+std::shared_ptr<Table> dropDatabase(std::string filename);
+
 void saveAndCloseDatabase(const std::shared_ptr<Table>& table);
 
-void saveDatabase(const std::shared_ptr<Table>& table);
+void freeTable(const std::shared_ptr<Table>& table);
+
+void saveTable(const std::shared_ptr<Table>& table);
 
 void* cursorValue(std::unique_ptr<Cursor>& cursor);
 

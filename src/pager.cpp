@@ -137,7 +137,7 @@ void Pager::pagerFlush(uint32_t pageNumber)
 
     if (!WriteFile(this->fileHandle, this->pages[pageNumber], PAGE_SIZE, &bytesWritten, nullptr))
     {
-        throw std::runtime_error("Error writing: " + std::to_string(GetLastError()));
+        throw std::runtime_error("Error while writing. Error code: " + std::to_string(GetLastError()));
     }
 }
 

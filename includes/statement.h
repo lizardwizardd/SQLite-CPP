@@ -34,11 +34,12 @@ typedef enum
     STATEMENT_CREATE,
     STATEMENT_INSERT,
     STATEMENT_SELECT,
+    STATEMENT_DROP,
     STATEMENT_OPEN
 } StatementType;
 
 typedef enum { 
-    PREPARE_SUCCESS, 
+    PREPARE_SUCCESS,
     PREPARE_NEGATIVE_ID, 
     PREPARE_STRING_TOO_LONG, 
     PREPARE_UNRECOGNIZED_STATEMENT, 
@@ -49,10 +50,12 @@ typedef enum {
     EXECUTE_SUCCESS, 
     EXECUTE_DUPLICATE_KEY, 
     EXECUTE_TABLE_FULL,
+    EXECUTE_TABLE_NOT_SELECTED,
     EXECUTE_ERROR_WHILE_CREATING,
     EXECUTE_ERROR_WHILE_OPENING,
-    EXECUTE_TABLE_NOT_SELECTED,
     EXECUTE_ERROR_FILE_EXISTS,
+    EXECUTE_ERROR_WHILE_DROPPING,
+    EXECUTE_ERROR_SHARING_VIOLATION,
     EXECUTE_ERROR_FILE_NOT_FOUND
 } ExecuteResult;
 
@@ -66,6 +69,10 @@ private:
 
     std::string tableName;
 
+    // Track statement execution attemts for stopping recursive executions,
+    // in case a function keeps failing
+    uint8_t attempts = 0;
+
 public:
 	Statement();
 
@@ -76,6 +83,8 @@ public:
     ExecuteResult executeOpen(std::shared_ptr<Table>& table);
 
 	ExecuteResult executeInsert(std::shared_ptr<Table>& table);
+
+    ExecuteResult executeDrop(std::shared_ptr<Table>& table);
 
 	static ExecuteResult executeSelect(std::shared_ptr<Table>& table);
 

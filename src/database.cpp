@@ -62,6 +62,9 @@ void Database::handleStatement()
         case EXECUTE_ERROR_WHILE_OPENING:
             std::cout << "Error: Failed to open a table. Error code: " << GetLastError() << std::endl;
             break;
+        case EXECUTE_ERROR_WHILE_DROPPING:
+            std::cout << "Error: Failed to drop a table. Error code: " << GetLastError() << std::endl;
+            break;
         case EXECUTE_TABLE_NOT_SELECTED:
             std::cout << "Error: Table not opened. Use \"create/open table [name]\" to create/open a table" << std::endl;
             break;

@@ -92,7 +92,29 @@ std::shared_ptr<Table> createDatabase(std::string filename)
     return table;
 }
 
-// Save, then free memorн and close table
+// Delete a .db file by a given filename
+std::shared_ptr<Table> dropDatabase(std::string filename)
+{
+    if (!DeleteFileA(filename.c_str()))
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        {
+            throw std::exception("File not found.");
+        }
+        else if (GetLastError() == ERROR_SHARING_VIOLATION)
+        {
+            throw std::exception("Can't drop while table is open.");
+        }
+        else
+        {
+            throw std::runtime_error("Unable to delete file.");
+        }
+    }
+
+    return nullptr;
+}
+
+// Save, then free memory and close table
 void saveAndCloseDatabase(const std::shared_ptr<Table>& table)
 {
     Pager* pager = table->pager;
@@ -126,7 +148,7 @@ void saveAndCloseDatabase(const std::shared_ptr<Table>& table)
 }
 
 // Save table without closing
-void saveDatabase(const std::shared_ptr<Table>& table)
+void saveTable(const std::shared_ptr<Table>& table)
 {
     Pager* pager = table->pager;
 
@@ -138,6 +160,22 @@ void saveDatabase(const std::shared_ptr<Table>& table)
         }
         pager->pagerFlush(i);
     }
+}
+
+// Free memory withount closing
+void freeTable(const std::shared_ptr<Table>& table)
+{
+
+    for (uint32_t i = 0; i < table->pager->pageCount; i++)
+    {
+        if (table->pager->pages[i] == NULL)
+        {
+            continue;
+        }
+        delete table->pager->pages[i];
+        table->pager->pages[i] = NULL;
+    }
+    delete table->pager;
 }
 
 void* cursorValue(std::unique_ptr<Cursor>& cursor)
