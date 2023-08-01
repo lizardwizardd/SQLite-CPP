@@ -55,7 +55,8 @@ void Database::runTest(std::vector<std::string>& commands)
     {
         if (commands.back() == ".exit")
         {
-            saveAndCloseDatabase(cachedTable);
+            if (this->cachedTable != nullptr)
+                saveAndCloseDatabase(cachedTable);
             return;
         }
         // print_prompt(); 
@@ -158,7 +159,28 @@ void getExpect(std::vector<std::string>& commands, std::vector<std::string>& exp
 TEST_F(DB_TEST, InsertAndSelect)
 {
     std::vector<std::string> commands = {
+        "create table test_case_1",
         "insert 1 " + longName + " " + longEmail,
+        "select",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed.",
+        "Executed.",
+        "(1, " + longName + ", " + longEmail + ")",
+        "Executed."
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, PersistenceBetweenFiles)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_1",
         "select",
         ".exit"
     };
@@ -174,30 +196,14 @@ TEST_F(DB_TEST, InsertAndSelect)
     EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
-TEST_F(DB_TEST, PersistenceBetweenFiles)
-{
-    std::vector<std::string> commands = {
-        "select",
-        ".exit"
-    };
-    std::vector<std::string> expect = {
-        "(1, " + longName + ", " + longEmail + ")",
-        "Executed."
-    };
-
-    Database databaseTest(argcGlobal, argvGlobal);
-    databaseTest.runTest(commands);
-
-    EXPECT_EQ(expect, outputCapturer.getOutputs());
-}
-
 TEST_F(DB_TEST, InsertStringTooLong)
 {
-    std::string longName(33, 'a');
-    std::string longEmail(256, 'a');
+    std::string tooLongName(33, 'a');
+    std::string tooLongEmail(256, 'a');
     
-    std::vector<std::string> commands = {  
-        "insert 99 " + longName + " " + longEmail, 
+    std::vector<std::string> commands = {
+        "open table test_case_1",
+        "insert 99 " + tooLongName + " " + tooLongEmail, 
         ".exit"
     };
 
@@ -210,6 +216,7 @@ TEST_F(DB_TEST, InsertStringTooLong)
 TEST_F(DB_TEST, ErrorWhenNegativeId)
 {   
     std::vector<std::string> commands = {
+        "open table test_case_1",
         "insert -1 aa aaaaaa", 
         ".exit"
     };
@@ -224,7 +231,6 @@ TEST_F(DB_TEST, PrintConstants)
 {   
     std::vector<std::string> commands = {
         ".constants", 
-        ".exit"
     };
     std::vector<std::string> expect = {
         "Constants:",
@@ -242,9 +248,27 @@ TEST_F(DB_TEST, PrintConstants)
     EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
-TEST_F(DB_TEST, Insert40Rows)
+TEST_F(DB_TEST, DropTable1)
 {
     std::vector<std::string> commands = {
+        "drop table test_case_1",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed."
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, Insert40Rows)
+{
+    // First command gets replaced with open table
+    std::vector<std::string> commands = {
+        "insert 0 xxx xxx",
         "insert 17 Ashley_Wilson ashley.wilson@example.com",
         "insert 33 Megan_Clark megan.clark@example.com",
         "insert 11 Samantha_Scott samantha.scott@example.com",
@@ -287,9 +311,11 @@ TEST_F(DB_TEST, Insert40Rows)
     };
 
     std::vector<std::string> expect;
-    expect.push_back("(1, " + longName + ", " + longEmail + ")");
     getExpect(commands, expect);
     expect.push_back("Executed.");
+
+    commands[0] = "create table test_case_2";
+    expect[0] = "Executed."; // for open table
 
     commands.push_back("select");
     commands.push_back(".exit");
@@ -306,10 +332,12 @@ TEST_F(DB_TEST, Insert40Rows)
 TEST_F(DB_TEST, InsertDuplicateKey)
 {
     std::vector<std::string> commands = {
-        "insert 1 Josh_Sawyer josh.sawyer@example.com",
+        "open table test_case_2",
+        "insert 4 Josh_Sawyer josh.sawyer@example.com",
         ".exit"
     };
     std::vector<std::string> expect = {
+        "Executed.",
         "Error: Duplicate key.",
     };
 
@@ -319,12 +347,34 @@ TEST_F(DB_TEST, InsertDuplicateKey)
     EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
+TEST_F(DB_TEST, DropTable2)
+{
+    std::vector<std::string> commands = {
+        "drop table test_case_2",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed."
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+//
+// MAIN
+//
+
 int main(int argc, char** argv) 
 {
     argcGlobal = argc;
     argvGlobal = argv;
-    // Initialize the Google Test framework
+
+    // Initialize gtest
     testing::InitGoogleTest(&argcGlobal, argvGlobal);
+
     // Run all tests
     return RUN_ALL_TESTS();
 }
