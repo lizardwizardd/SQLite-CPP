@@ -252,7 +252,7 @@ void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* valu
 
     // After dividing all keys between left and right nodes,
     // move each key to correct position, starting from the right
-    for (uint32_t i = LEAF_NODE_MAX_CELLS; i >= 0; i--) 
+    for (int32_t i = LEAF_NODE_MAX_CELLS; i >= 0; i--) 
     {
         void* destinationNode;
         if (i >= LEAF_NODE_LEFT_SPLIT_COUNT) 
