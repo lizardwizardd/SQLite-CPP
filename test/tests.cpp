@@ -363,6 +363,55 @@ TEST_F(DB_TEST, DropTable2)
     EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
+TEST_F(DB_TEST, InsertALot)
+{
+    int insertCount = 1600;
+    std::vector<std::string> commands;
+    std::vector<std::string> expect(insertCount + 1, "Executed."); // +1 for create table
+
+    // Executed + Executed * insertCount + select * insertCount
+    expect.resize(1 + insertCount + insertCount);
+
+    commands.push_back("create table test_case_3");
+
+    for (int i = insertCount; i > 0; i--)
+    {
+        std::string iStr = std::to_string(i);
+        commands.push_back("insert " + iStr + "Name_" + iStr + 
+                           " address_" + iStr + "@example.com");
+
+        expect[insertCount + i] = ("(" + iStr + ", Name_" + iStr + 
+                                   ", address_" + iStr + "@example.com)");
+    }
+
+    commands.push_back("select");
+    commands.push_back(".exit");
+    expect.push_back("Executed.");
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, DropTable3)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_3",
+        "drop table test_case_3",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed.",
+        "Executed."
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
 //
 // MAIN
 //

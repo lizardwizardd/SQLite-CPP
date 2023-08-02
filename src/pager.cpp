@@ -14,8 +14,8 @@ void* Pager::getPage(uint32_t pageNumber)
 {
     if (pageNumber > TABLE_MAX_PAGES)
     {
-        throw std::runtime_error("Tried to fetch page number out of bounds. "
-            + std::to_string(pageNumber) + " > " + std::to_string(TABLE_MAX_PAGES));
+        throw std::runtime_error("Ran out of pages. Increase TABLE_MAX_PAGES if you need more. "
+            + std::to_string(pageNumber) + " > " + std::to_string(TABLE_MAX_PAGES) + ".");
     }
 
     if (this->pages[pageNumber] == NULL)
