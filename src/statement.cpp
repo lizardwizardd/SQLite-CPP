@@ -15,21 +15,21 @@ MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer> inputBuffer,
 	{
         saveTable(table);
 		std::cout << "Executed." << std::endl;
-        return META_COMMAND_SUCCESS;
+        return MetaCommandResult::META_COMMAND_SUCCESS;
 	}
     else if (inputBuffer->getBuffer() == ".btree")
     {
         printTree(table->pager, 0, 0);
-        return META_COMMAND_SUCCESS;
+        return MetaCommandResult::META_COMMAND_SUCCESS;
     }
     else if (inputBuffer->getBuffer() == ".constants")
     {
         printConstants();
-        return META_COMMAND_SUCCESS;
+        return MetaCommandResult::META_COMMAND_SUCCESS;
     }
 	else
 	{
-		return META_COMMAND_UNRECOGNIZED_COMMAND;
+		return MetaCommandResult::META_COMMAND_UNRECOGNIZED_COMMAND;
 	}
 }
 
@@ -41,7 +41,7 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
 {
     if (inputBuffer->getBuffer().compare(0, 12, "create table", 0, 12) == 0)
     {
-        type = STATEMENT_CREATE;
+        type = StatementType::STATEMENT_CREATE;
 
         std::string args = inputBuffer->getBuffer();
         std::stringstream argStream(args.substr(12, args.size()));
@@ -50,16 +50,16 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
 
         if (!(argStream >> _tableName))
         {
-            return PREPARE_SYNTAX_ERROR;
+            return PrepareResult::PREPARE_SYNTAX_ERROR;
         }
 
         this->tableName = _tableName;
 
-        return PREPARE_SUCCESS;
+        return PrepareResult::PREPARE_SUCCESS;
     }
     else if (inputBuffer->getBuffer().compare(0, 10, "open table", 0, 10) == 0)
     {
-        type = STATEMENT_OPEN;
+        type = StatementType::STATEMENT_OPEN;
 
         std::string args = inputBuffer->getBuffer();
         std::stringstream argStream(args.substr(10, args.size()));
@@ -68,16 +68,16 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
 
         if (!(argStream >> _tableName))
         {
-            return PREPARE_SYNTAX_ERROR;
+            return PrepareResult::PREPARE_SYNTAX_ERROR;
         }
 
         this->tableName = _tableName;
 
-        return PREPARE_SUCCESS;
+        return PrepareResult::PREPARE_SUCCESS;
     }
     else if (inputBuffer->getBuffer().compare(0, 10, "drop table", 0, 10) == 0)
     {
-        type = STATEMENT_DROP;
+        type = StatementType::STATEMENT_DROP;
 
         std::string args = inputBuffer->getBuffer();
         std::stringstream argStream(args.substr(10, args.size()));
@@ -86,16 +86,16 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
 
         if (!(argStream >> _tableName))
         {
-            return PREPARE_SYNTAX_ERROR;
+            return PrepareResult::PREPARE_SYNTAX_ERROR;
         }
 
         this->tableName = _tableName;
 
-        return PREPARE_SUCCESS;
+        return PrepareResult::PREPARE_SUCCESS;
     }
 	else if (inputBuffer->getBuffer().compare(0, 6, "insert", 0, 6) == 0)
 	{
-		type = STATEMENT_INSERT;
+		type = StatementType::STATEMENT_INSERT;
 
 		std::string args = inputBuffer->getBuffer();
 		std::stringstream argStream(args.substr(6, args.size()));
@@ -106,35 +106,35 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
 
 		if (!(argStream >> _id >> _username >> _email))
 		{
-			return PREPARE_SYNTAX_ERROR;
+			return PrepareResult::PREPARE_SYNTAX_ERROR;
 		}
         if (_id < 1)
         {
-            return PREPARE_NEGATIVE_ID;
+            return PrepareResult::PREPARE_NEGATIVE_ID;
         }
         if (_email.size() > COLUMN_EMAIL_SIZE)
         {
-            return PREPARE_STRING_TOO_LONG;
+            return PrepareResult::PREPARE_STRING_TOO_LONG;
         }
         if (_username.size() > COLUMN_USERNAME_SIZE)
         {
-            return PREPARE_STRING_TOO_LONG;
+            return PrepareResult::PREPARE_STRING_TOO_LONG;
         }
 
         rowToInsert.id = _id;
         strcpy_s(rowToInsert.email, _email.c_str());
         strcpy_s(rowToInsert.username, _username.c_str());
 
-		return PREPARE_SUCCESS;
+		return PrepareResult::PREPARE_SUCCESS;
 	}
 
 	if (inputBuffer->getBuffer() == "select")
 	{
-		type = STATEMENT_SELECT;
-		return PREPARE_SUCCESS;
+		type = StatementType::STATEMENT_SELECT;
+		return PrepareResult::PREPARE_SUCCESS;
 	}
 
-	return PREPARE_UNRECOGNIZED_STATEMENT;
+	return PrepareResult::PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
 // Change cached table to the new one if created successfully,
@@ -150,11 +150,11 @@ ExecuteResult Statement::executeCreate(std::shared_ptr<Table>& table)
     {
         if (GetLastError() == ERROR_FILE_EXISTS)
         {
-            return EXECUTE_ERROR_FILE_EXISTS;
+            return ExecuteResult::EXECUTE_ERROR_FILE_EXISTS;
         }
         else
         {
-            return EXECUTE_ERROR_WHILE_CREATING;
+            return ExecuteResult::EXECUTE_ERROR_WHILE_CREATING;
         }
     }
 
@@ -163,7 +163,7 @@ ExecuteResult Statement::executeCreate(std::shared_ptr<Table>& table)
         saveAndCloseDatabase(table);
     table = _table;
 
-    return EXECUTE_SUCCESS;
+    return ExecuteResult::EXECUTE_SUCCESS;
 }
 
 // Change cached table to the new one if opened successfully,
@@ -179,11 +179,11 @@ ExecuteResult Statement::executeOpen(std::shared_ptr<Table>& table)
     {
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            return EXECUTE_ERROR_FILE_NOT_FOUND;
+            return ExecuteResult::EXECUTE_ERROR_FILE_NOT_FOUND;
         }
         else
         {
-            return EXECUTE_ERROR_WHILE_OPENING;
+            return ExecuteResult::EXECUTE_ERROR_WHILE_OPENING;
         }
     }
 
@@ -192,7 +192,7 @@ ExecuteResult Statement::executeOpen(std::shared_ptr<Table>& table)
         saveAndCloseDatabase(table);
     table = _table;
 
-    return EXECUTE_SUCCESS;
+    return ExecuteResult::EXECUTE_SUCCESS;
 }
 
 ExecuteResult Statement::executeDrop(std::shared_ptr<Table>& table)
@@ -206,14 +206,14 @@ ExecuteResult Statement::executeDrop(std::shared_ptr<Table>& table)
     {
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            return EXECUTE_ERROR_FILE_NOT_FOUND;
+            return ExecuteResult::EXECUTE_ERROR_FILE_NOT_FOUND;
         }
         // SHARING_VIOLATION happens when file can't be accessed
         // because it's currently open
         else if (GetLastError() == ERROR_SHARING_VIOLATION)
         {
             // Close file first
-            CloseHandle(table->pager->fileHandle);
+            CloseHandle(table->pager->getFileHandle());
 
             // Check the attempt count to avoid infinite loop
             if (this->attempts > 2)
@@ -230,18 +230,18 @@ ExecuteResult Statement::executeDrop(std::shared_ptr<Table>& table)
         }
         else
         {
-            return EXECUTE_ERROR_WHILE_DROPPING;
+            return ExecuteResult::EXECUTE_ERROR_WHILE_DROPPING;
         }
     }
 
-    return EXECUTE_SUCCESS;
+    return ExecuteResult::EXECUTE_SUCCESS;
 }
 
 ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
 {
     if (table == nullptr)
     {
-        return EXECUTE_TABLE_NOT_SELECTED;
+        return ExecuteResult::EXECUTE_TABLE_NOT_SELECTED;
     }
 
     // Point cursor at the position for a new key 
@@ -256,20 +256,20 @@ ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
         uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
         if (keyAtIndex == keyToInsert)
         {
-            return EXECUTE_DUPLICATE_KEY;
+            return ExecuteResult::EXECUTE_DUPLICATE_KEY;
         }
     }
 
 	leafInsert(cursor, this->rowToInsert.id, &rowToInsert);
 
-	return EXECUTE_SUCCESS;
+	return ExecuteResult::EXECUTE_SUCCESS;
 }
 
 ExecuteResult Statement::executeSelect(std::shared_ptr<Table>& table)
 {
     if (table == nullptr)
     {
-        return EXECUTE_TABLE_NOT_SELECTED;
+        return ExecuteResult::EXECUTE_TABLE_NOT_SELECTED;
     }
 
     std::unique_ptr<Cursor> cursor = tableStart(table);
@@ -277,27 +277,27 @@ ExecuteResult Statement::executeSelect(std::shared_ptr<Table>& table)
 	Row row;
 	while (!(cursor->endOfTable))
 	{
-		deserialize_row(cursorValue(cursor), &row);
-		print_row(&row);
+		deserializeRow(cursorValue(cursor), &row);
+		printRow(&row);
         cursorAdvance(cursor);
 	}
 
-	return EXECUTE_SUCCESS;
+	return ExecuteResult::EXECUTE_SUCCESS;
 }
 
 ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
 {
 	switch (type)
 	{
-    case(STATEMENT_CREATE):
+    case(StatementType::STATEMENT_CREATE):
         return executeCreate(table);
-	case (STATEMENT_INSERT):
+	case (StatementType::STATEMENT_INSERT):
 		return executeInsert(table);
-	case (STATEMENT_SELECT):
+	case (StatementType::STATEMENT_SELECT):
 		return executeSelect(table);
-    case(STATEMENT_OPEN):
+    case(StatementType::STATEMENT_OPEN):
         return executeOpen(table);
-    case(STATEMENT_DROP):
+    case(StatementType::STATEMENT_DROP):
         return executeDrop(table);
     default:
         throw std::exception("Unknown statement.");
@@ -333,7 +333,7 @@ void printConstants()
 }
 
 // Utility function to plrint spaces for printTree
-void indent(uint32_t level) 
+void indent(uint32_t level)
 {
     for (uint32_t i = 0; i < level; i++) 
     {
@@ -341,7 +341,7 @@ void indent(uint32_t level)
     }
 }
 
-void printTree(Pager* pager, uint32_t pageNumber, uint32_t indentation_level) {
+void printTree(const std::unique_ptr<Pager>& pager, uint32_t pageNumber, uint32_t indentation_level) {
     void* node = pager->getPage(pageNumber);
     uint32_t keyCount, child;
 

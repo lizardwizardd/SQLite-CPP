@@ -20,14 +20,22 @@
 
 class Pager
 {
-public:
+private:
     HANDLE fileHandle;
     uint32_t fileLength;
     uint32_t pageCount;
+
+public:
     void* pages[TABLE_MAX_PAGES];
 
 public:
+    Pager(HANDLE fileHandle, uint32_t fileLength, uint32_t pageCount);
+
     void* getPages();
+
+    HANDLE& getFileHandle();
+    
+    uint32_t& getPageCount();
 
     uint32_t getFileLength();
 
@@ -38,6 +46,6 @@ public:
     uint32_t getUnusedPageNumber();
 };
 
-Pager* openPager(std::string filename);
+std::unique_ptr<Pager> openPager(std::string filename);
 
-Pager* createPager(std::string filename);
+std::unique_ptr<Pager> createPager(std::string filename);

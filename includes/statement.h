@@ -14,39 +14,41 @@
 
 // META COMMANDS
 
-typedef enum {
+enum class MetaCommandResult {
 	META_COMMAND_SUCCESS,
+    META_COMMAND_SYNTAX_ERROR,
 	META_COMMAND_UNRECOGNIZED_COMMAND
-} MetaCommandResult;
+};
 
-MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer>, const std::shared_ptr<Table>&);
+MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer>, 
+                                const std::shared_ptr<Table>&);
 
 void printConstants();
 
 void indent(uint32_t level);
 
-void printTree(Pager* pager, uint32_t pageNumber, uint32_t indentation_level);
+void printTree(const std::unique_ptr<Pager>& pager,
+               uint32_t pageNumber, uint32_t indentation_level);
 
 // STATEMENTS
 
-typedef enum 
-{
+enum class StatementType {
     STATEMENT_CREATE,
     STATEMENT_INSERT,
     STATEMENT_SELECT,
     STATEMENT_DROP,
     STATEMENT_OPEN
-} StatementType;
+};
 
-typedef enum { 
+enum class PrepareResult { 
     PREPARE_SUCCESS,
     PREPARE_NEGATIVE_ID, 
     PREPARE_STRING_TOO_LONG, 
     PREPARE_UNRECOGNIZED_STATEMENT, 
     PREPARE_SYNTAX_ERROR 
-} PrepareResult;
+};
 
-typedef enum { 
+enum class ExecuteResult { 
     EXECUTE_SUCCESS, 
     EXECUTE_DUPLICATE_KEY, 
     EXECUTE_TABLE_FULL,
@@ -57,7 +59,7 @@ typedef enum {
     EXECUTE_ERROR_WHILE_DROPPING,
     EXECUTE_ERROR_SHARING_VIOLATION,
     EXECUTE_ERROR_FILE_NOT_FOUND
-} ExecuteResult;
+};
 
 
 class Statement

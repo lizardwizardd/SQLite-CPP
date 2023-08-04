@@ -1,27 +1,30 @@
 #include "../includes/data.h"
 
-
+// Copy a row into a file
 void serializeRow(Row* source, void* destination) 
 {
-    char* dest = static_cast<char*>(destination);
-    memcpy(dest + ID_OFFSET, &(source->id), ID_SIZE);
-    memcpy(dest + USERNAME_OFFSET, source->username, USERNAME_SIZE);
-    memcpy(dest + EMAIL_OFFSET, source->email, EMAIL_SIZE);
+    char* destPtr = static_cast<char*>(destination);
+    memcpy(destPtr + ID_OFFSET, &(source->id), ID_SIZE);
+    memcpy(destPtr + USERNAME_OFFSET, source->username, USERNAME_SIZE);
+    memcpy(destPtr + EMAIL_OFFSET, source->email, EMAIL_SIZE);
 }
 
-void deserialize_row(void* source, Row* destination) 
+// Copy data from file into a row 
+void deserializeRow(void* source, Row* destination) 
 {
-    char* src = static_cast<char*>(source);
-    memcpy(&(destination->id), src + ID_OFFSET, ID_SIZE);
-    memcpy(&(destination->username), src + USERNAME_OFFSET, USERNAME_SIZE);
-    memcpy(&(destination->email), src + EMAIL_OFFSET, EMAIL_SIZE);
+    char* srcPtr = static_cast<char*>(source);
+    memcpy(&(destination->id), srcPtr + ID_OFFSET, ID_SIZE);
+    memcpy(&(destination->username), srcPtr + USERNAME_OFFSET, USERNAME_SIZE);
+    memcpy(&(destination->email), srcPtr + EMAIL_OFFSET, EMAIL_SIZE);
 }
 
-void print_row(Row* row)
+void printRow(Row* row)
 {
     std::cout << "(" << row->id << ", " << row->username
               << ", " << row->email << ")" << std::endl;
 }
+
+Table::Table(std::unique_ptr<Pager> pager, uint32_t rootPageNumber) : pager(std::move(pager)), rootPageNumber(rootPageNumber) { }
 
 std::unique_ptr<Cursor> tableStart(std::shared_ptr<Table>& table)
 {
@@ -54,17 +57,12 @@ std::unique_ptr<Cursor> tableFindKey(std::shared_ptr<Table>& table, uint32_t key
 
 std::shared_ptr<Table> openDatabase(std::string filename)
 {
-    Pager* _pager = openPager(filename);
+    std::shared_ptr<Table> table = std::make_shared<Table>(openPager(filename), 0);
 
-    // TODO: a constructor for this
-    std::shared_ptr<Table> table = std::make_unique<Table>();
-    table->pager = _pager;
-    table->rootPageNumber = 0;
-
-    if (_pager->pageCount == 0)
+    if (table->pager->getPageCount() == 0)
     {
         // New database file. Initialize page 0 as leaf node
-        void* rootNode = _pager->getPage(0);
+        void* rootNode = table->pager->getPage(0);
         leafInitialize(rootNode);
         setRootNode(rootNode, true);
     }
@@ -74,17 +72,12 @@ std::shared_ptr<Table> openDatabase(std::string filename)
 
 std::shared_ptr<Table> createDatabase(std::string filename)
 {
-    Pager* _pager = createPager(filename);
+    std::shared_ptr<Table> table = std::make_shared<Table>(createPager(filename), 0);
 
-    // TODO: a constructor for this
-    std::shared_ptr<Table> table = std::make_unique<Table>();
-    table->pager = _pager;
-    table->rootPageNumber = 0;
-
-    if (_pager->pageCount == 0)
+    if (table->pager->getPageCount() == 0)
     {
         // New database file. Initialize page 0 as leaf node
-        void* rootNode = _pager->getPage(0);
+        void* rootNode = table->pager->getPage(0);
         leafInitialize(rootNode);
         setRootNode(rootNode, true);
     }
@@ -117,56 +110,50 @@ std::shared_ptr<Table> dropDatabase(std::string filename)
 // Save, then free memory and close table
 void saveAndCloseDatabase(const std::shared_ptr<Table>& table)
 {
-    Pager* pager = table->pager;
-
-    for (uint32_t i = 0; i < pager->pageCount; i++)
+    for (uint32_t i = 0; i < table->pager->getPageCount(); i++)
     {
-        if (pager->pages[i] == NULL)
+        if (table->pager->pages[i] == NULL)
         {
             continue;
         }
-        pager->pagerFlush(i);
-        delete pager->pages[i];
-        pager->pages[i] = NULL;
+        table->pager->pagerFlush(i);
+        delete table->pager->pages[i];
+        table->pager->pages[i] = NULL;
     }
 
-    if (CloseHandle(pager->fileHandle) == 0)
+    if (CloseHandle(table->pager->getFileHandle()) == 0)
     {
         throw std::runtime_error("Error closing db file.");
     }
 
     for (uint32_t i = 0; i < TABLE_MAX_PAGES; i++)
     {
-        void* page = pager->pages[i];
+        void* page = table->pager->pages[i];
         if (page)
         {
             free(page);
-            pager->pages[i] = NULL;
+            table->pager->pages[i] = NULL;
         }
     }
-    delete pager;
 }
 
 // Save table without closing
 void saveTable(const std::shared_ptr<Table>& table)
 {
-    Pager* pager = table->pager;
-
-    for (uint32_t i = 0; i < pager->pageCount; i++)
+    for (uint32_t i = 0; i < table->pager->getPageCount(); i++)
     {
-        if (pager->pages[i] == NULL)
+        if (table->pager->pages[i] == NULL)
         {
             continue;
         }
-        pager->pagerFlush(i);
+        table->pager->pagerFlush(i);
     }
 }
 
 // Free memory withount closing
 void freeTable(const std::shared_ptr<Table>& table)
 {
-
-    for (uint32_t i = 0; i < table->pager->pageCount; i++)
+    for (uint32_t i = 0; i < table->pager->getPageCount(); i++)
     {
         if (table->pager->pages[i] == NULL)
         {
@@ -175,7 +162,6 @@ void freeTable(const std::shared_ptr<Table>& table)
         delete table->pager->pages[i];
         table->pager->pages[i] = NULL;
     }
-    delete table->pager;
 }
 
 void* cursorValue(std::unique_ptr<Cursor>& cursor)
@@ -569,7 +555,7 @@ void internalSplitAndInsert(std::shared_ptr<Table>& table, uint32_t parentPageNu
 }
 
 // Get current max key in node
-uint32_t getMaxKey(Pager* pager, void* node) 
+uint32_t getMaxKey(const std::unique_ptr<Pager>& pager, void* node) 
 {
     if (nodeGetType(node) == NODE_LEAF) 
     {

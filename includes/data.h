@@ -17,23 +17,28 @@
 
 void serializeRow(Row*, void*);
 
-void deserialize_row(void*, Row*);
+void deserializeRow(void*, Row*);
 
-void print_row(Row*);
+void printRow(Row*);
 
-typedef struct 
+class Table 
 {
-	Pager* pager;
+public:
+	std::unique_ptr<Pager> pager;
     uint32_t rootPageNumber;
-} Table;
 
-typedef struct
+public:
+    Table(std::unique_ptr<Pager> pager, uint32_t rootPageNumber);
+};
+
+class Cursor
 {
+public:
     std::shared_ptr<Table> table; // Current table
     uint32_t pageNumber; // Current page number
     uint32_t cellCount; // Current cell number
     bool endOfTable; // Indicates a position one past the last element
-} Cursor;
+};
 
 std::unique_ptr<Cursor> tableStart(std::shared_ptr<Table>& table);
 
@@ -73,4 +78,4 @@ void internalInsert(std::shared_ptr<Table>& table,
 void internalSplitAndInsert(std::shared_ptr<Table>& table, 
                                     uint32_t parent_page_num, uint32_t child_page_num);
 
-uint32_t getMaxKey(Pager* pager, void* node);
+uint32_t getMaxKey(const std::unique_ptr<Pager>& pager, void* node);

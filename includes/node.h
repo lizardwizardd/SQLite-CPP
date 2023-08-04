@@ -11,8 +11,6 @@
 
 typedef enum { NODE_INTERNAL, NODE_LEAF } NodeType;
 
-// TODO: Node class, derived classes InternalNode and LeafNode
-
 uint32_t* leafGetCellCount(void* node);
 
 void* LeafGetCell(void* node, uint32_t cellCount);

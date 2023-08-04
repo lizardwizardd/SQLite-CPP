@@ -10,6 +10,9 @@ uint32_t Pager::getFileLength()
     return fileLength;
 }
 
+Pager::Pager(HANDLE fileHandle, uint32_t fileLength, uint32_t pageCount) : 
+    fileHandle(fileHandle), fileLength(fileLength), pageCount(pageCount) { }
+
 void* Pager::getPage(uint32_t pageNumber)
 {
     if (pageNumber > TABLE_MAX_PAGES)
@@ -51,8 +54,18 @@ void* Pager::getPage(uint32_t pageNumber)
     return this->pages[pageNumber];
 }
 
+HANDLE& Pager::getFileHandle()
+{
+    return fileHandle;
+}
+
+uint32_t& Pager::getPageCount()
+{
+    return pageCount;
+}
+
 // Open pager from an existing .db file
-Pager* openPager(std::string filename)
+std::unique_ptr<Pager> openPager(std::string filename)
 {
     HANDLE fileHandle = CreateFileA(filename.c_str(), GENERIC_READ | GENERIC_WRITE,
                         0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -69,10 +82,8 @@ Pager* openPager(std::string filename)
 
     DWORD fileLength = GetFileSize(fileHandle, NULL);
 
-    Pager* pager = new Pager();
-    pager->fileHandle = fileHandle;
-    pager->fileLength = fileLength;
-    pager->pageCount = fileLength / PAGE_SIZE;
+    std::unique_ptr<Pager> pager = std::make_unique<Pager>(fileHandle, fileLength, 
+                                                           fileLength / PAGE_SIZE);
 
     if (fileLength % PAGE_SIZE != 0)
     {
@@ -88,7 +99,7 @@ Pager* openPager(std::string filename)
 }
 
 // Create a pager in a new .db file, throw an exception if it already exists
-Pager* createPager(std::string filename)
+std::unique_ptr<Pager> createPager(std::string filename)
 {
     HANDLE fileHandle = CreateFileA(filename.c_str(), GENERIC_READ | GENERIC_WRITE,
                         0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -105,10 +116,8 @@ Pager* createPager(std::string filename)
 
     DWORD fileLength = GetFileSize(fileHandle, NULL);
 
-    Pager* pager = new Pager();
-    pager->fileHandle = fileHandle;
-    pager->fileLength = fileLength;
-    pager->pageCount = fileLength / PAGE_SIZE;
+    std::unique_ptr<Pager> pager = std::make_unique<Pager>(fileHandle, fileLength, 
+                                                           fileLength / PAGE_SIZE);
 
     if (fileLength % PAGE_SIZE != 0)
     {
