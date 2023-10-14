@@ -36,6 +36,7 @@ enum class StatementType {
     STATEMENT_CREATE,
     STATEMENT_INSERT,
     STATEMENT_SELECT,
+    STATEMENT_UPDATE,
     STATEMENT_DROP,
     STATEMENT_OPEN
 };
@@ -50,14 +51,14 @@ enum class PrepareResult {
 
 enum class ExecuteResult { 
     EXECUTE_SUCCESS, 
-    EXECUTE_DUPLICATE_KEY, 
+    EXECUTE_DUPLICATE_KEY,
+    EXECUTE_KEY_DOES_NOT_EXIST,
     EXECUTE_TABLE_FULL,
     EXECUTE_TABLE_NOT_SELECTED,
     EXECUTE_ERROR_WHILE_CREATING,
     EXECUTE_ERROR_WHILE_OPENING,
     EXECUTE_ERROR_FILE_EXISTS,
     EXECUTE_ERROR_WHILE_DROPPING,
-    EXECUTE_ERROR_SHARING_VIOLATION,
     EXECUTE_ERROR_FILE_NOT_FOUND
 };
 
@@ -85,6 +86,8 @@ public:
     ExecuteResult executeOpen(std::shared_ptr<Table>& table);
 
 	ExecuteResult executeInsert(std::shared_ptr<Table>& table);
+
+	ExecuteResult executeUpdate(std::shared_ptr<Table>& table);
 
     ExecuteResult executeDrop(std::shared_ptr<Table>& table);
 

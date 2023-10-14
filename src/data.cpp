@@ -24,7 +24,9 @@ void printRow(Row* row)
               << ", " << row->email << ")" << std::endl;
 }
 
-Table::Table(std::unique_ptr<Pager> pager, uint32_t rootPageNumber) : pager(std::move(pager)), rootPageNumber(rootPageNumber) { }
+Table::Table(std::unique_ptr<Pager> pager, uint32_t rootPageNumber) : 
+    pager(std::move(pager)), 
+    rootPageNumber(rootPageNumber) { }
 
 std::unique_ptr<Cursor> tableStart(std::shared_ptr<Table>& table)
 {
@@ -40,7 +42,7 @@ std::unique_ptr<Cursor> tableStart(std::shared_ptr<Table>& table)
 
 // Return the position of a given key. 
 // If the key is not present, return the position where it should be inserted
-std::unique_ptr<Cursor> tableFindKey(std::shared_ptr<Table>& table, uint32_t key)
+std::unique_ptr<Cursor> tableFindKey(std::shared_ptr<Table>& table, const uint32_t key)
 {
     uint32_t rootPageNumber = table->rootPageNumber;
     void* rootNode = table->pager->getPage(rootPageNumber);
@@ -195,10 +197,37 @@ void cursorAdvance(std::unique_ptr<Cursor>& cursor)
     }
 }
 
-void leafInsert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* value)
+// Same as cursorAdvance
+Cursor& Cursor::operator++(int)
+{
+    void* node = this->table->pager->getPage(pageNumber);
+    
+    cellCount += 1;
+    if (cellCount >= (*leafGetCellCount(node)))
+    {
+        // Advance to next leaf node
+        uint32_t nextPageNum = *leafGetNextLeaf(node);
+        if (nextPageNum == 0)
+        {
+            // This was rightmost leaf
+            endOfTable = true;
+        }
+        else
+        {
+            pageNumber = nextPageNum;
+            cellCount = 0;
+        }
+    }
+
+    return *this;
+}
+
+// Inserts a new key-value pair into the leaf node of the B-tree
+void leafInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value)
 {
     void* node = cursor->table->pager->getPage(cursor->pageNumber);
 
+    // Check if node is full
     uint32_t cellCount = *leafGetCellCount(node);
     if (cellCount >= LEAF_NODE_MAX_CELLS)
     {
@@ -207,9 +236,9 @@ void leafInsert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* value)
         return;
     }
 
+    // Make room for new cell if necessary
     if (cursor->cellCount < cellCount)
     {
-        // Make room for new cell
         for (uint32_t i = cellCount; i > cursor->cellCount; i--)
         {
             memcpy(LeafGetCell(node, i), LeafGetCell(node, i - 1), LEAF_NODE_CELL_SIZE);
@@ -221,7 +250,15 @@ void leafInsert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* value)
     serializeRow(value, leafGetValue(node, cursor->cellCount));
 }
 
-void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* value)
+void leafUpdate(std::unique_ptr<Cursor>& cursor, Row* value)
+{
+    void* node = cursor->table->pager->getPage(cursor->pageNumber);
+
+    serializeRow(value, leafGetValue(node, cursor->cellCount));
+}
+
+// Splits a leaf node and inserts a new key-value pair into the appropriate node
+void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value)
 {
     // Create a new node and move half the cells over.
     // Insert the new value in one of the two nodes.
@@ -290,7 +327,7 @@ void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, uint32_t key, Row* valu
 
 // Search table for a node that contains the given key
 std::unique_ptr<Cursor> findLeafNode(std::shared_ptr<Table>& table, 
-                                       uint32_t pageNumber, uint32_t key)
+                                       uint32_t pageNumber, const uint32_t key)
 {
     void* node = table->pager->getPage(pageNumber);
     uint32_t cellCount = *leafGetCellCount(node);
@@ -374,7 +411,7 @@ void createNewRootNode(std::shared_ptr<Table>& table, uint32_t rightChildPageNum
 
 // Search table for a node that contains the given key
 std::unique_ptr<Cursor> findInternalNode(std::shared_ptr<Table>& table, 
-                                           uint32_t pageNumber, uint32_t key)
+                                           uint32_t pageNumber, const uint32_t key)
 {
     void* node = table->pager->getPage(pageNumber);
 
@@ -393,7 +430,7 @@ std::unique_ptr<Cursor> findInternalNode(std::shared_ptr<Table>& table,
 }
 
 // Return the index of the child which should contain the given key
-uint32_t internalFindChild(void* node, uint32_t key)
+uint32_t internalFindChild(void* node, const uint32_t key)
 {
     uint32_t numKeys = *internalGetKeyCount(node);
 
