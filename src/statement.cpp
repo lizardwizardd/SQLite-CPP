@@ -128,6 +128,41 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
 		return PrepareResult::PREPARE_SUCCESS;
 	}
 
+    else if (inputBuffer->getBuffer().compare(0, 6, "update", 0, 6) == 0)
+    {
+        type = StatementType::STATEMENT_UPDATE;
+
+        std::string args = inputBuffer->getBuffer();
+        std::stringstream argStream(args.substr(6, args.size()));
+
+        int32_t _id;
+        std::string _newUsername;
+        std::string _newEmail;
+
+        if (!(argStream >> _id >> _newUsername >> _newEmail))
+        {
+            return PrepareResult::PREPARE_SYNTAX_ERROR;
+        }
+        if (_id < 1)
+        {
+            return PrepareResult::PREPARE_NEGATIVE_ID;
+        }
+        if (_newEmail.size() > COLUMN_EMAIL_SIZE)
+        {
+            return PrepareResult::PREPARE_STRING_TOO_LONG;
+        }
+        if (_newUsername.size() > COLUMN_USERNAME_SIZE)
+        {
+            return PrepareResult::PREPARE_STRING_TOO_LONG;
+        }
+
+        rowToInsert.id = _id;
+        strcpy_s(rowToInsert.email, _newEmail.c_str());
+        strcpy_s(rowToInsert.username, _newUsername.c_str());
+
+        return PrepareResult::PREPARE_SUCCESS;
+    }
+
 	if (inputBuffer->getBuffer() == "select")
 	{
 		type = StatementType::STATEMENT_SELECT;
@@ -209,7 +244,7 @@ ExecuteResult Statement::executeDrop(std::shared_ptr<Table>& table)
             return ExecuteResult::EXECUTE_ERROR_FILE_NOT_FOUND;
         }
         // SHARING_VIOLATION happens when file can't be accessed
-        // because it's currently open
+        // because it's currently opened
         else if (GetLastError() == ERROR_SHARING_VIOLATION)
         {
             // Close file first
@@ -237,6 +272,35 @@ ExecuteResult Statement::executeDrop(std::shared_ptr<Table>& table)
     return ExecuteResult::EXECUTE_SUCCESS;
 }
 
+ExecuteResult Statement::executeUpdate(std::shared_ptr<Table>& table)
+{
+    if (table == nullptr)
+    {
+        return ExecuteResult::EXECUTE_TABLE_NOT_SELECTED;
+    }
+
+    // Point cursor at the position of the key to update 
+	uint32_t keyToUpdate = this->rowToInsert.id;
+    std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToUpdate);
+
+    // Check if key exists
+    void* node = table->pager->getPage(cursor->pageNumber);
+    uint32_t cellCount = *leafGetCellCount(node);
+    if (cursor->cellCount < cellCount)
+    {
+        uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
+        if (keyAtIndex == keyToUpdate)
+        {
+            // Update key with new values
+            leafUpdate(cursor, &rowToInsert);
+            
+            return ExecuteResult::EXECUTE_SUCCESS;
+        }
+    }
+
+    return ExecuteResult::EXECUTE_KEY_DOES_NOT_EXIST;
+}
+
 ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
 {
     if (table == nullptr)
@@ -248,9 +312,9 @@ ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
 	uint32_t keyToInsert = this->rowToInsert.id;
     std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToInsert);
 
+    // Check if key already exists
     void* node = table->pager->getPage(cursor->pageNumber);
     uint32_t cellCount = *leafGetCellCount(node);
-
     if (cursor->cellCount < cellCount)
     {
         uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
@@ -279,7 +343,7 @@ ExecuteResult Statement::executeSelect(std::shared_ptr<Table>& table)
 	{
 		deserializeRow(cursorValue(cursor), &row);
 		printRow(&row);
-        cursorAdvance(cursor);
+        (*cursor)++; // move by one position
 	}
 
 	return ExecuteResult::EXECUTE_SUCCESS;
@@ -293,6 +357,8 @@ ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
         return executeCreate(table);
 	case (StatementType::STATEMENT_INSERT):
 		return executeInsert(table);
+    case (StatementType::STATEMENT_UPDATE):
+        return executeUpdate(table);
 	case (StatementType::STATEMENT_SELECT):
 		return executeSelect(table);
     case(StatementType::STATEMENT_OPEN):
