@@ -347,6 +347,58 @@ TEST_F(DB_TEST, InsertDuplicateKey)
     EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
+TEST_F(DB_TEST, UpdateExistingKeyValue)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_2",
+        "update 4 Bob_Ross bob.ross@example.com",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed.",
+        "Executed.",
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, UpdateNonExistingKeyValue)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_2",
+        "update 1234 John_Snow john.snow@example.com",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed.",
+        "Error: Key does not exist.",
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, UpdatePersistance)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_2",
+        "select",
+        ".exit"
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("(4, Bob_Ross, bob.ross@example.com)", 
+                      outputCapturer.getOutputs()[1]);
+
+}
+
 TEST_F(DB_TEST, DropTable2)
 {
     std::vector<std::string> commands = {
