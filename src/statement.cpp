@@ -121,13 +121,12 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
             return PrepareResult::PREPARE_STRING_TOO_LONG;
         }
 
-        rowToInsert.id = _id;
-        strcpy_s(rowToInsert.email, _email.c_str());
-        strcpy_s(rowToInsert.username, _username.c_str());
+        rowToEdit.id = _id;
+        strcpy_s(rowToEdit.email, _email.c_str());
+        strcpy_s(rowToEdit.username, _username.c_str());
 
 		return PrepareResult::PREPARE_SUCCESS;
 	}
-
     else if (inputBuffer->getBuffer().compare(0, 6, "update", 0, 6) == 0)
     {
         type = StatementType::STATEMENT_UPDATE;
@@ -156,9 +155,30 @@ PrepareResult Statement::prepareStatement(InputBuffer* inputBuffer)
             return PrepareResult::PREPARE_STRING_TOO_LONG;
         }
 
-        rowToInsert.id = _id;
-        strcpy_s(rowToInsert.email, _newEmail.c_str());
-        strcpy_s(rowToInsert.username, _newUsername.c_str());
+        rowToEdit.id = _id;
+        strcpy_s(rowToEdit.email, _newEmail.c_str());
+        strcpy_s(rowToEdit.username, _newUsername.c_str());
+
+        return PrepareResult::PREPARE_SUCCESS;
+    }
+    else if (inputBuffer->getBuffer().compare(0, 6, "delete", 0, 6) == 0)
+    {
+        type = StatementType::STATEMENT_DELETE;
+
+        std::string args = inputBuffer->getBuffer();
+        std::stringstream argStream(args.substr(6, args.size()));
+
+        int32_t _id;
+        if (!(argStream >> _id))
+        {
+            return PrepareResult::PREPARE_SYNTAX_ERROR;
+        }
+        if (_id < 1)
+        {
+            return PrepareResult::PREPARE_NEGATIVE_ID;
+        }
+
+        rowToEdit.id = _id;
 
         return PrepareResult::PREPARE_SUCCESS;
     }
@@ -280,7 +300,7 @@ ExecuteResult Statement::executeUpdate(std::shared_ptr<Table>& table)
     }
 
     // Point cursor at the position of the key to update 
-	uint32_t keyToUpdate = this->rowToInsert.id;
+	uint32_t keyToUpdate = this->rowToEdit.id;
     std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToUpdate);
 
     // Check if key exists
@@ -292,7 +312,7 @@ ExecuteResult Statement::executeUpdate(std::shared_ptr<Table>& table)
         if (keyAtIndex == keyToUpdate)
         {
             // Update key with new values
-            leafUpdate(cursor, &rowToInsert);
+            leafUpdate(cursor, &rowToEdit);
             
             return ExecuteResult::EXECUTE_SUCCESS;
         }
@@ -309,7 +329,7 @@ ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
     }
 
     // Point cursor at the position for a new key 
-	uint32_t keyToInsert = this->rowToInsert.id;
+	uint32_t keyToInsert = this->rowToEdit.id;
     std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToInsert);
 
     // Check if key already exists
@@ -320,13 +340,62 @@ ExecuteResult Statement::executeInsert(std::shared_ptr<Table>& table)
         uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
         if (keyAtIndex == keyToInsert)
         {
-            return ExecuteResult::EXECUTE_DUPLICATE_KEY;
+            // Check if key was marked as deleted
+            Row rowAtIndex;
+            deserializeRow(cursorValue(cursor), &rowAtIndex);
+            if (rowAtIndex.id != 0)
+            {
+                return ExecuteResult::EXECUTE_DUPLICATE_KEY;
+            }
+            else
+            {
+                // Overwrite deleted key
+                leafUpdate(cursor, &rowToEdit);
+                return ExecuteResult::EXECUTE_SUCCESS;
+            }
         }
     }
 
-	leafInsert(cursor, this->rowToInsert.id, &rowToInsert);
-
+	leafInsert(cursor, this->rowToEdit.id, &rowToEdit);
 	return ExecuteResult::EXECUTE_SUCCESS;
+}
+
+ExecuteResult Statement::executeDelete(std::shared_ptr<Table>& table)
+{
+    if (table == nullptr)
+    {
+        return ExecuteResult::EXECUTE_TABLE_NOT_SELECTED;
+    }
+
+    // Point cursor at the position of the key to delete
+    uint32_t keyToDelete = this->rowToEdit.id;
+    std::unique_ptr<Cursor> cursor = tableFindKey(table, keyToDelete);
+
+    // Check if key exists
+    void* node = table->pager->getPage(cursor->pageNumber);
+    uint32_t cellCount = *leafGetCellCount(node);
+    if (cursor->cellCount < cellCount)
+    {
+        uint32_t keyAtIndex = *leafGetKey(node, cursor->cellCount);
+        if (keyAtIndex == keyToDelete)
+        {
+            // Check if key was marked as deleted
+            Row rowAtIndex;
+            deserializeRow(cursorValue(cursor), &rowAtIndex);
+            if (rowAtIndex.id == 0)
+            {
+                return ExecuteResult::EXECUTE_KEY_DOES_NOT_EXIST;
+            }
+            else
+            {
+                // Delete key
+                leafDelete(cursor);
+                return ExecuteResult::EXECUTE_SUCCESS;
+            }
+        }
+    }
+    
+    return ExecuteResult::EXECUTE_KEY_DOES_NOT_EXIST;
 }
 
 ExecuteResult Statement::executeSelect(std::shared_ptr<Table>& table)
@@ -357,6 +426,8 @@ ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
 		return executeInsert(table);
     case (StatementType::STATEMENT_UPDATE):
         return executeUpdate(table);
+    case (StatementType::STATEMENT_DELETE):
+        return executeDelete(table);
 	case (StatementType::STATEMENT_SELECT):
 		return executeSelect(table);
     case(StatementType::STATEMENT_CREATE):
@@ -377,7 +448,7 @@ const StatementType Statement::getStatement() const
 
 const Row Statement::getRow() const
 {
-	return this->rowToInsert;
+	return this->rowToEdit;
 }
 
 const std::string Statement::getTableName() const
@@ -420,7 +491,13 @@ void printTree(const std::unique_ptr<Pager>& pager, uint32_t pageNumber, uint32_
             for (uint32_t i = 0; i < keyCount; i++)
             {
                 indent(indentation_level + 1);
-                std::cout << "- " << *leafGetKey(node, i) << "\n";
+                // Check if key is marked as deleted
+                Row currentRow;
+                deserializeRow(leafGetValue(node, i), &currentRow);
+                if (currentRow.id == 0) // key is marked as deleted
+                    std::cout << "- " << *leafGetKey(node, i) << "*" << "\n";
+                else
+                    std::cout << "- " << *leafGetKey(node, i) << "\n";
             }
             break;
         case (NODE_INTERNAL):

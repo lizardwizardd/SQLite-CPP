@@ -36,7 +36,7 @@ class Cursor
 public:
     std::shared_ptr<Table> table; // current table
     uint32_t pageNumber; // current page number
-    uint32_t cellCount; // number of cells
+    uint32_t cellCount; // cells (rows) in current node
     bool endOfTable; // indicates a position one past the last element
 
 public:
@@ -62,6 +62,7 @@ uint32_t getMaxKey(const std::unique_ptr<Pager>& pager, void* node);
 
 void leafInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value);
 void leafUpdate(std::unique_ptr<Cursor>& cursor, Row* value);
+void leafDelete(std::unique_ptr<Cursor>& cursor);
 void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value);
 
 std::unique_ptr<Cursor> findLeafNode(std::shared_ptr<Table>& table, 

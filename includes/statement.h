@@ -20,7 +20,8 @@ enum class StatementType {
     STATEMENT_SELECT,
     STATEMENT_UPDATE,
     STATEMENT_DROP,
-    STATEMENT_OPEN
+    STATEMENT_OPEN,
+    STATEMENT_DELETE
 };
 
 enum class PrepareResult { 
@@ -49,7 +50,7 @@ class Statement
 {
 private:
 	StatementType type;
-	Row rowToInsert;
+	Row rowToEdit;
     std::string tableName;
 
     // Track statement execution attemts to avoid avoid recursive executions,
@@ -65,6 +66,7 @@ public:
 	ExecuteResult executeInsert(std::shared_ptr<Table>& table);
 	ExecuteResult executeUpdate(std::shared_ptr<Table>& table);
     ExecuteResult executeDrop(std::shared_ptr<Table>& table);
+    ExecuteResult executeDelete(std::shared_ptr<Table>& table);
 	static ExecuteResult executeSelect(std::shared_ptr<Table>& table);
 
 	ExecuteResult executeStatement(std::shared_ptr<Table>& table);

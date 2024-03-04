@@ -20,6 +20,9 @@ void deserializeRow(void* source, Row* destination)
 
 void printRow(Row* row)
 {
+    if (row->id == 0) // row is marked as deleted
+        return;
+
     std::cout << "(" << row->id << ", " << row->username
               << ", " << row->email << ")" << std::endl;
 }
@@ -241,7 +244,8 @@ void leafInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value)
     {
         for (uint32_t i = cellCount; i > cursor->cellCount; i--)
         {
-            memcpy(leafGetCell(node, i), leafGetCell(node, i - 1), LEAF_NODE_CELL_SIZE);
+            memcpy(leafGetCell(node, i), leafGetCell(node, i - 1),
+                   LEAF_NODE_CELL_SIZE);
         }
     }
 
@@ -253,8 +257,18 @@ void leafInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value)
 void leafUpdate(std::unique_ptr<Cursor>& cursor, Row* value)
 {
     void* node = cursor->table->pager->getPage(cursor->pageNumber);
-
     serializeRow(value, leafGetValue(node, cursor->cellCount));
+}
+
+void leafDelete(std::unique_ptr<Cursor>& cursor)
+{
+    void* node = cursor->table->pager->getPage(cursor->pageNumber);
+    void* cellToDelete = leafGetValue(node, cursor->cellCount);
+
+    // Replace key with 0 without erasing other data to make undo possible
+    uint32_t deletedKeyMarker = 0;
+    memcpy(static_cast<char*>(cellToDelete) + ID_OFFSET,
+           &deletedKeyMarker, ID_SIZE);
 }
 
 // Splits a leaf node and inserts a new key-value pair into the appropriate node
@@ -411,7 +425,7 @@ void createNewRootNode(std::shared_ptr<Table>& table, uint32_t rightChildPageNum
 
 // Search table for a node that contains the given key
 std::unique_ptr<Cursor> findInternalNode(std::shared_ptr<Table>& table, 
-                                           uint32_t pageNumber, const uint32_t key)
+                                         uint32_t pageNumber, const uint32_t key)
 {
     void* node = table->pager->getPage(pageNumber);
 
@@ -457,7 +471,7 @@ uint32_t internalFindChild(void* node, const uint32_t key)
 }
 
 void internalInsert(std::shared_ptr<Table>& table, uint32_t parentPageNumber,
-                          uint32_t childPageNumber)
+                    uint32_t childPageNumber)
 {
     // Add a new child/key pair to parent that corresponds to child
     void* parent = table->pager->getPage(parentPageNumber);
