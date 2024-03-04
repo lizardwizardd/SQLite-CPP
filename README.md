@@ -25,8 +25,9 @@ cmake --build ./build
 - ```create table [table-name]``` - create a new *[table-name].db* file and open it.
 - ```open table [table-name]``` - open an existing *[table-name].db* file.
 - ```drop table [table-name]``` - delete an existing *[table-name].db* file.
-- ```insert [id] [string1] [string2]``` - insert a new row into an opened database. Length of [string1] <= 32, [string2] <= 255.
+- ```insert [id] [string1] [string2]``` - insert a new row into the opened database. Length of [string1] <= 32, [string2] <= 255.
 - ```update [id] [string1] [string2]``` - update an existing row with new [string1] and [string2] values.
+- ```delete [id]``` - soft delete an existing row from the opened database.
 - ```select``` - print all rows from the opened database, sorted by primary key in ascending order.
 - ```.save``` - save database.
 - ```.exit``` - save database and exit the program.
