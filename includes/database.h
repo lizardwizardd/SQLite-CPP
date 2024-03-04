@@ -25,13 +25,11 @@ public:
     Database(int argc, char** argv);
 
     void handleMetaCommand();
-
     void handleStatement();
 
     void printErrorMessage(const std::string& message);
 
     void run();
-
     void runTest(std::vector<std::string>& commands);
 
     ~Database();

@@ -6,7 +6,7 @@ uint32_t* leafGetCellCount(void* node)
     return reinterpret_cast<uint32_t*>(charPtr + LEAF_NODE_NUM_CELLS_OFFSET);
 }
 
-void* LeafGetCell(void* node, uint32_t cellCount)
+void* leafGetCell(void* node, uint32_t cellCount)
 {
     char* charPtr = reinterpret_cast<char*>(node);
     return reinterpret_cast<void*>(charPtr + LEAF_NODE_HEADER_SIZE + 
@@ -15,12 +15,12 @@ void* LeafGetCell(void* node, uint32_t cellCount)
 
 uint32_t* leafGetKey(void* node, uint32_t cellCount)
 {
-    return reinterpret_cast<uint32_t*>(LeafGetCell(node, cellCount));
+    return reinterpret_cast<uint32_t*>(leafGetCell(node, cellCount));
 }
 
 void* leafGetValue(void* node, uint32_t cellCount)
 {
-    char* charPtr = reinterpret_cast<char*>(LeafGetCell(node, cellCount));
+    char* charPtr = reinterpret_cast<char*>(leafGetCell(node, cellCount));
     return reinterpret_cast<void*>(charPtr + LEAF_NODE_KEY_SIZE);
 }
 

@@ -12,24 +12,6 @@
 #include "node.h"
 
 
-// META COMMANDS
-
-enum class MetaCommandResult {
-	META_COMMAND_SUCCESS,
-    META_COMMAND_SYNTAX_ERROR,
-	META_COMMAND_UNRECOGNIZED_COMMAND
-};
-
-MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer>, 
-                                const std::shared_ptr<Table>&);
-
-void printConstants();
-
-void indent(uint32_t level);
-
-void printTree(const std::unique_ptr<Pager>& pager,
-               uint32_t pageNumber, uint32_t indentation_level);
-
 // STATEMENTS
 
 enum class StatementType {
@@ -67,12 +49,10 @@ class Statement
 {
 private:
 	StatementType type;
-
 	Row rowToInsert;
-
     std::string tableName;
 
-    // Track statement execution attemts for stopping recursive executions,
+    // Track statement execution attemts to avoid avoid recursive executions,
     // in case a function keeps failing
     uint8_t attempts = 0;
 
@@ -80,24 +60,34 @@ public:
 	Statement();
 
 	PrepareResult prepareStatement(InputBuffer*);
-
     ExecuteResult executeCreate(std::shared_ptr<Table>& table);
-
     ExecuteResult executeOpen(std::shared_ptr<Table>& table);
-
 	ExecuteResult executeInsert(std::shared_ptr<Table>& table);
-
 	ExecuteResult executeUpdate(std::shared_ptr<Table>& table);
-
     ExecuteResult executeDrop(std::shared_ptr<Table>& table);
-
 	static ExecuteResult executeSelect(std::shared_ptr<Table>& table);
 
 	ExecuteResult executeStatement(std::shared_ptr<Table>& table);
 
 	const StatementType getStatement() const;
-
     const std::string getTableName() const;
-
 	const Row getRow() const;
 };
+
+// META COMMANDS
+
+enum class MetaCommandResult {
+	META_COMMAND_SUCCESS,
+    META_COMMAND_SYNTAX_ERROR,
+	META_COMMAND_UNRECOGNIZED_COMMAND
+};
+
+MetaCommandResult doMetaCommand(std::shared_ptr<InputBuffer>, 
+                                const std::shared_ptr<Table>&);
+
+void printConstants();
+
+void indent(uint32_t level);
+
+void printTree(const std::unique_ptr<Pager>& pager,
+               uint32_t pageNumber, uint32_t indentation_level);

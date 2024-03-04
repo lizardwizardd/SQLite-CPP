@@ -28,24 +28,17 @@ private:
 public:
     void* pages[TABLE_MAX_PAGES];
 
-public:
     Pager(HANDLE fileHandle, uint32_t fileLength, uint32_t pageCount);
 
     void* getPages();
-
     HANDLE& getFileHandle();
-    
     uint32_t& getPageCount();
-
     uint32_t getFileLength();
-
     void* getPage(uint32_t pageNumber);
+    uint32_t getUnusedPageNumber();
 
     void pagerFlush(uint32_t pageNumber);
-
-    uint32_t getUnusedPageNumber();
 };
 
 std::unique_ptr<Pager> openPager(std::string filename);
-
 std::unique_ptr<Pager> createPager(std::string filename);

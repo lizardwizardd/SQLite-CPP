@@ -241,7 +241,7 @@ void leafInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value)
     {
         for (uint32_t i = cellCount; i > cursor->cellCount; i--)
         {
-            memcpy(LeafGetCell(node, i), LeafGetCell(node, i - 1), LEAF_NODE_CELL_SIZE);
+            memcpy(leafGetCell(node, i), leafGetCell(node, i - 1), LEAF_NODE_CELL_SIZE);
         }
     }
 
@@ -287,7 +287,7 @@ void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row
             destinationNode = oldNode;
         }
         uint32_t indexInNode = i % LEAF_NODE_LEFT_SPLIT_COUNT;
-        void* destination = LeafGetCell(destinationNode, indexInNode);
+        void* destination = leafGetCell(destinationNode, indexInNode);
 
         if (i == cursor->cellCount) 
         {
@@ -296,11 +296,11 @@ void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row
         } 
         else if (i > cursor->cellCount)
         {
-            memcpy(destination, LeafGetCell(oldNode, i - 1), LEAF_NODE_CELL_SIZE);
+            memcpy(destination, leafGetCell(oldNode, i - 1), LEAF_NODE_CELL_SIZE);
         }
         else
         {
-            memcpy(destination, LeafGetCell(oldNode, i), LEAF_NODE_CELL_SIZE);
+            memcpy(destination, leafGetCell(oldNode, i), LEAF_NODE_CELL_SIZE);
         }
     }
 

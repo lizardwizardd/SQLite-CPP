@@ -44,43 +44,32 @@ public:
 };
 
 std::unique_ptr<Cursor> tableStart(std::shared_ptr<Table>& table);
-
 std::unique_ptr<Cursor> tableFindKey(std::shared_ptr<Table>& table, const uint32_t key);
 
 std::shared_ptr<Table> openDatabase(std::string filename);
-
 std::shared_ptr<Table> createDatabase(std::string filename);
-
 std::shared_ptr<Table> dropDatabase(std::string filename);
-
 void saveAndCloseDatabase(const std::shared_ptr<Table>& table);
 
 void freeTable(const std::shared_ptr<Table>& table);
-
 void saveTable(const std::shared_ptr<Table>& table);
 
 void* cursorValue(std::unique_ptr<Cursor>& cursor);
-
 void cursorAdvance(std::unique_ptr<Cursor>& cursor);
 
+void createNewRootNode(std::shared_ptr<Table>& table, uint32_t right_child_page_num);
+uint32_t getMaxKey(const std::unique_ptr<Pager>& pager, void* node);
+
 void leafInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value);
-
 void leafUpdate(std::unique_ptr<Cursor>& cursor, Row* value);
-
 void leafSplitAndInsert(std::unique_ptr<Cursor>& cursor, const uint32_t key, Row* value);
 
 std::unique_ptr<Cursor> findLeafNode(std::shared_ptr<Table>& table, 
-                                       uint32_t pageNumber, const uint32_t key);
-
-void createNewRootNode(std::shared_ptr<Table>& table, uint32_t right_child_page_num);
-
+                                     uint32_t pageNumber, const uint32_t key);
 std::unique_ptr<Cursor> findInternalNode(std::shared_ptr<Table>& table,
-                                           uint32_t pageNumber, const uint32_t key);
+                                         uint32_t pageNumber, const uint32_t key);
 
 void internalInsert(std::shared_ptr<Table>& table, 
-                          uint32_t parent_page_num, uint32_t child_page_num);
-
+                    uint32_t parent_page_num, uint32_t child_page_num);
 void internalSplitAndInsert(std::shared_ptr<Table>& table,
-                                    uint32_t parent_page_num, uint32_t child_page_num);
-
-uint32_t getMaxKey(const std::unique_ptr<Pager>& pager, void* node);
+                            uint32_t parent_page_num, uint32_t child_page_num);

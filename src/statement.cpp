@@ -353,14 +353,14 @@ ExecuteResult Statement::executeStatement(std::shared_ptr<Table>& table)
 {
 	switch (type)
 	{
-    case(StatementType::STATEMENT_CREATE):
-        return executeCreate(table);
-	case (StatementType::STATEMENT_INSERT):
+    case (StatementType::STATEMENT_INSERT):
 		return executeInsert(table);
     case (StatementType::STATEMENT_UPDATE):
         return executeUpdate(table);
 	case (StatementType::STATEMENT_SELECT):
 		return executeSelect(table);
+    case(StatementType::STATEMENT_CREATE):
+        return executeCreate(table);
     case(StatementType::STATEMENT_OPEN):
         return executeOpen(table);
     case(StatementType::STATEMENT_DROP):
