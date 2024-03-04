@@ -383,7 +383,7 @@ TEST_F(DB_TEST, UpdateNonExistingKeyValue)
     EXPECT_EQ(expect, outputCapturer.getOutputs());
 }
 
-TEST_F(DB_TEST, UpdatePersistance)
+TEST_F(DB_TEST, UpdatePersistence)
 {
     std::vector<std::string> commands = {
         "open table test_case_2",
@@ -403,6 +403,87 @@ TEST_F(DB_TEST, DropTable2)
 {
     std::vector<std::string> commands = {
         "drop table test_case_2",
+        ".exit"
+    };
+    std::vector<std::string> expect = {
+        "Executed."
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ(expect, outputCapturer.getOutputs());
+}
+
+TEST_F(DB_TEST, DoesntPrintDeletedRows)
+{
+    std::vector<std::string> commands = {
+        "create table test_case_4",
+        "insert 1 Bob_Ross bob.ross@example.com",
+        "insert 5 John_Snow john.snow@example.com",
+        "insert 3 Rick_Smith rick.smith@example.com",
+        "delete 1",
+        "delete 5",
+        "select",
+        ".exit"
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("(3, Rick_Smith, rick.smith@example.com)",
+              outputCapturer.getOutputs()[6]);
+}
+
+TEST_F(DB_TEST, DeletedRowsPersistence)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_4",
+        "select",
+        ".exit"
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("(3, Rick_Smith, rick.smith@example.com)",
+              outputCapturer.getOutputs()[1]);
+}
+
+TEST_F(DB_TEST, CantDeleteDeletedRow)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_4",
+        "delete 1",
+        ".exit"
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("Error: Key does not exist.", outputCapturer.getOutputs()[1]);
+}
+
+TEST_F(DB_TEST, CanOverwriteDeletedRow)
+{
+    std::vector<std::string> commands = {
+        "open table test_case_4",
+        "insert 1 Steve_Jobs steve.jobs@example.com",
+        "select",
+        ".exit"
+    };
+
+    Database databaseTest(argcGlobal, argvGlobal);
+    databaseTest.runTest(commands);
+
+    EXPECT_EQ("(1, Steve_Jobs, steve.jobs@example.com)",
+              outputCapturer.getOutputs()[2]);
+}
+
+TEST_F(DB_TEST, DropTable4)
+{
+    std::vector<std::string> commands = {
+        "drop table test_case_4",
         ".exit"
     };
     std::vector<std::string> expect = {
